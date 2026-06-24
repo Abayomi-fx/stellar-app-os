@@ -6,12 +6,14 @@ import {
   type DonorInfo,
   DEFAULT_DONATION_FLOW_STATE,
 } from '@/lib/types/donor';
+import type { DonationAsset } from '@/lib/types/donation-payment';
 
 interface DonationContextValue {
   state: DonationFlowState;
   setAmount: (_amount: number) => void;
   setTreeCount: (_count: number) => void;
   setIsMonthly: (_isMonthly: boolean) => void;
+  setAsset: (_asset: DonationAsset) => void;
   setDonorInfo: (_info: Partial<DonorInfo>) => void;
   resetFlow: () => void;
 }
@@ -35,6 +37,10 @@ export function DonationProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, isMonthly }));
   }, []);
 
+  const setAsset = useCallback((asset: DonationAsset) => {
+    setState((prev) => ({ ...prev, asset }));
+  }, []);
+
   const setDonorInfo = useCallback((info: Partial<DonorInfo>) => {
     setState((prev) => ({
       ...prev,
@@ -47,8 +53,8 @@ export function DonationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, resetFlow }),
-    [state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, resetFlow]
+    () => ({ state, setAmount, setTreeCount, setIsMonthly, setAsset, setDonorInfo, resetFlow }),
+    [state, setAmount, setTreeCount, setIsMonthly, setAsset, setDonorInfo, resetFlow]
   );
 
   return <DonationContext.Provider value={value}>{children}</DonationContext.Provider>;
