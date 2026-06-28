@@ -5,7 +5,7 @@
  * species catalogue. Voting power is proportional to TREE token holdings.
  */
 
-import { TransactionBuilder, Operation, BASE_FEE } from '@stellar/stellar-sdk';
+import { TransactionBuilder, Operation, BASE_FEE, Contract } from '@stellar/stellar-sdk';
 import { Horizon } from '@stellar/stellar-sdk';
 import type { NetworkType } from '@/lib/types/wallet';
 import { networkConfig } from '@/lib/config/network';
@@ -97,19 +97,9 @@ export async function buildProposeSpeciesTransaction(
     networkPassphrase,
   })
     .addOperation(
-      Operation.invokeHostFunction({
-        func: {
-          args: [
-            // Contract function args will go here
-          ],
-          auth: [],
-        },
-        hostFunction: {
-          type: 'invokeContract',
-          contractId: getSpeciesVotingContract(network),
-          functionName: 'propose_species',
-        },
-      })
+      new Contract(getSpeciesVotingContract(network)).call(
+        'propose_species'
+      )
     )
     .setTimeout(300)
     .build();
@@ -146,17 +136,9 @@ export async function buildVoteTransaction(
     networkPassphrase,
   })
     .addOperation(
-      Operation.invokeHostFunction({
-        func: {
-          args: [],
-          auth: [],
-        },
-        hostFunction: {
-          type: 'invokeContract',
-          contractId: getSpeciesVotingContract(network),
-          functionName: 'vote',
-        },
-      })
+      new Contract(getSpeciesVotingContract(network)).call(
+        'vote'
+      )
     )
     .setTimeout(300)
     .build();
@@ -191,17 +173,9 @@ export async function buildExecuteProposalTransaction(
     networkPassphrase,
   })
     .addOperation(
-      Operation.invokeHostFunction({
-        func: {
-          args: [],
-          auth: [],
-        },
-        hostFunction: {
-          type: 'invokeContract',
-          contractId: getSpeciesVotingContract(network),
-          functionName: 'execute_proposal',
-        },
-      })
+      new Contract(getSpeciesVotingContract(network)).call(
+        'execute_proposal'
+      )
     )
     .setTimeout(300)
     .build();
