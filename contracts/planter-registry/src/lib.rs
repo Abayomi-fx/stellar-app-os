@@ -6,10 +6,16 @@
 //! Tracks reputation scores that can be incremented (by escrow on successful
 //! completion) or slashed (on dispute resolution).  A minimum score threshold
 //! can be checked before high-value job acceptance.
+//!
+//! #461 additions:
+//! - get_avail(region): returns active planters with workload < capacity
+//! - inc_work(planter): increments workload (escrow-only)
+//! - dec_work(planter): decrements workload, increments total_trees_planted (escrow-only)
+//! - capacity & workload tracking per planter
 
 use soroban_sdk::{
     contract, contractimpl, contracttype, contracterror, panic_with_error, symbol_short,
-    Address, BytesN, Env, IntoVal, String,
+    Address, BytesN, Env, IntoVal, String, Symbol, Vec,
 };
 
 // ── Errors ────────────────────────────────────────────────────────────────────
@@ -23,6 +29,10 @@ pub enum Error {
     AlreadyRegistered = 3,
     NotRegistered = 4,
     NotAuthorized = 5,
+    CapacityExceeded = 6,
+    PlanterInactive = 7,
+    WorkloadAlreadyZero = 8,
+    EscrowNotSet = 9,
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -46,6 +56,14 @@ pub struct PlanterRecord {
     pub region: String,
     pub score: u32,
     pub registered_at: u64,
+    /// Max trees this planter can handle simultaneously.
+    pub capacity: u32,
+    /// Current assigned trees (workload).
+    pub workload: u32,
+    /// Whether the planter is active and available for new assignments.
+    pub active: bool,
+    /// Total trees successfully completed.
+    pub total_trees_planted: u64,
 }
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -65,9 +83,19 @@ impl PlanterRegistry {
             .set(&symbol_short!("ADMIN"), &admin);
     }
 
+    /// Set the escrow contract address (for workload management).
+    /// Only callable by admin.
+    pub fn set_escrow(env: Env, escrow: Address) {
+        Self::require_admin(&env);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("ESCROW"), &escrow);
+    }
+
     /// Register a new planter.
     ///
     /// The wallet must sign the transaction.  Starting score is `INITIAL_SCORE`.
+    /// Capacity defaults to 10 trees.
     pub fn register_planter(
         env: Env,
         wallet: Address,
@@ -87,14 +115,29 @@ impl PlanterRegistry {
         let record = PlanterRecord {
             wallet: wallet.clone(),
             name_hash,
-            region,
+            region: region.clone(),
             score: INITIAL_SCORE,
             registered_at: env.ledger().timestamp(),
+            capacity: 10,
+            workload: 0,
+            active: true,
+            total_trees_planted: 0,
         };
 
         env.storage()
             .persistent()
             .set(&Self::planter_key(&env, &wallet), &record);
+
+        // Add to region index
+        let mut region_planters: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&Self::region_key(&env, &region))
+            .unwrap_or(Vec::new(&env));
+        region_planters.push_back(wallet.clone());
+        env.storage()
+            .persistent()
+            .set(&Self::region_key(&env, &region), &region_planters);
 
         env.events().publish(
             (symbol_short!("PlantReg"), wallet.clone()),
@@ -170,10 +213,141 @@ impl PlanterRegistry {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // #461: Anonymous donation flow — workload & availability
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Get available planters in a region.
+    /// Returns planters where: active=true AND workload < capacity
+    pub fn get_avail(env: Env, region: String) -> Vec<Address> {
+        let region_planters: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&Self::region_key(&env, &region))
+            .unwrap_or(Vec::new(&env));
+
+        let mut available = Vec::new(&env);
+        for addr in region_planters.iter() {
+            if let Some(planter) = env
+                .storage()
+                .persistent()
+                .get::<_, PlanterRecord>(&Self::planter_key(&env, &addr))
+            {
+                if planter.active && planter.workload < planter.capacity {
+                    available.push_back(addr);
+                }
+            }
+        }
+        available
+    }
+
+    /// Increment planter workload (called by escrow on tree assignment).
+    /// Only callable by the escrow contract.
+    pub fn inc_work(env: Env, wallet: Address) {
+        Self::require_escrow(&env);
+
+        let key = Self::planter_key(&env, &wallet);
+        let mut record: PlanterRecord = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotRegistered));
+
+        if !record.active {
+            panic_with_error!(&env, Error::PlanterInactive);
+        }
+
+        if record.workload >= record.capacity {
+            panic_with_error!(&env, Error::CapacityExceeded);
+        }
+
+        record.workload += 1;
+        env.storage().persistent().set(&key, &record);
+
+        env.events().publish(
+            (symbol_short!("WorkInc"), wallet.clone()),
+            record.workload,
+        );
+    }
+
+    /// Decrement planter workload (called by escrow on tree completion).
+    /// Also increments total_trees_planted.
+    /// Only callable by the escrow contract.
+    pub fn dec_work(env: Env, wallet: Address) {
+        Self::require_escrow(&env);
+
+        let key = Self::planter_key(&env, &wallet);
+        let mut record: PlanterRecord = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotRegistered));
+
+        if record.workload == 0 {
+            panic_with_error!(&env, Error::WorkloadAlreadyZero);
+        }
+
+        record.workload -= 1;
+        record.total_trees_planted += 1;
+        env.storage().persistent().set(&key, &record);
+
+        env.events().publish(
+            (symbol_short!("WorkDec"), wallet.clone()),
+            record.workload,
+        );
+    }
+
+    /// Set planter active/inactive (admin only).
+    pub fn set_active(env: Env, wallet: Address, active: bool) {
+        Self::require_admin(&env);
+
+        let key = Self::planter_key(&env, &wallet);
+        let mut record: PlanterRecord = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotRegistered));
+
+        record.active = active;
+        env.storage().persistent().set(&key, &record);
+
+        env.events().publish(
+            (symbol_short!("ActiveSet"), wallet.clone()),
+            active,
+        );
+    }
+
+    /// Update planter capacity (admin only).
+    pub fn set_capacity(env: Env, wallet: Address, capacity: u32) {
+        Self::require_admin(&env);
+
+        let key = Self::planter_key(&env, &wallet);
+        let mut record: PlanterRecord = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotRegistered));
+
+        record.capacity = capacity;
+        env.storage().persistent().set(&key, &record);
+    }
+
+    /// Get all planters in a region (including inactive/full ones).
+    pub fn get_planters_by_region(env: Env, region: String) -> Vec<Address> {
+        env.storage()
+            .persistent()
+            .get(&Self::region_key(&env, &region))
+            .unwrap_or(Vec::new(&env))
+    }
+
     // ── internal ──────────────────────────────────────────────────────────────
 
     fn planter_key(env: &Env, wallet: &Address) -> soroban_sdk::Val {
         (symbol_short!("PLANTER"), wallet.clone()).into_val(env)
+    }
+
+    fn region_key(env: &Env, region: &String) -> soroban_sdk::Val {
+        (symbol_short!("REGION"), region.clone()).into_val(env)
     }
 
     fn require_admin(env: &Env) {
@@ -183,6 +357,15 @@ impl PlanterRegistry {
             .get(&symbol_short!("ADMIN"))
             .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized));
         admin.require_auth();
+    }
+
+    fn require_escrow(env: &Env) {
+        let escrow: Address = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("ESCROW"))
+            .unwrap_or_else(|| panic_with_error!(env, Error::EscrowNotSet));
+        escrow.require_auth();
     }
 }
 
@@ -225,6 +408,10 @@ mod tests {
 
         assert_eq!(record.wallet, planter);
         assert_eq!(record.score, INITIAL_SCORE);
+        assert_eq!(record.capacity, 10);
+        assert_eq!(record.workload, 0);
+        assert_eq!(record.active, true);
+        assert_eq!(record.total_trees_planted, 0);
 
         let stored = client.get_planter(&planter).unwrap();
         assert_eq!(stored.region, String::from_str(&env, "s1"));
@@ -288,7 +475,6 @@ mod tests {
 
         client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "s1"));
 
-        // Slash many times to drive score to zero without panicking.
         for _ in 0..20 {
             client.slash_score(&planter);
         }
@@ -326,7 +512,6 @@ mod tests {
         client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "s1"));
         client.slash_score(&planter);
 
-        // Score is now INITIAL_SCORE - SCORE_SLASH
         assert!(!client.meets_min_score(&planter, &INITIAL_SCORE));
         assert!(client.meets_min_score(&planter, &(INITIAL_SCORE - SCORE_SLASH)));
     }
@@ -335,5 +520,152 @@ mod tests {
     fn test_meets_min_score_unregistered_returns_false() {
         let (env, _, client) = setup();
         assert!(!client.meets_min_score(&Address::generate(&env), &0u32));
+    }
+
+    // ── #461: get_avail ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_get_available_planters() {
+        let (env, _admin, client) = setup();
+        let escrow = Address::generate(&env);
+        client.set_escrow(&escrow);
+
+        let p1 = Address::generate(&env);
+        client.register_planter(&p1, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+
+        let p2 = Address::generate(&env);
+        client.register_planter(&p2, &name_hash(&env, 2), &String::from_str(&env, "kenya"));
+        client.set_capacity(&p2, &5u32);
+        env.set_auths(&[escrow.clone()]);
+        for _ in 0..5 {
+            client.inc_work(&p2);
+        }
+
+        let p3 = Address::generate(&env);
+        client.register_planter(&p3, &name_hash(&env, 3), &String::from_str(&env, "kenya"));
+        client.set_active(&p3, &false);
+
+        let p4 = Address::generate(&env);
+        client.register_planter(&p4, &name_hash(&env, 4), &String::from_str(&env, "india"));
+
+        let available = client.get_avail(&String::from_str(&env, "kenya"));
+        assert_eq!(available.len(), 1);
+        assert_eq!(available.get(0).unwrap(), p1);
+    }
+
+    #[test]
+    fn test_get_available_planters_empty_region() {
+        let (env, _, client) = setup();
+        let available = client.get_avail(&String::from_str(&env, "antarctica"));
+        assert!(available.is_empty());
+    }
+
+    // ── #461: inc_work / dec_work ─────────────────────────────────────────────
+
+    #[test]
+    fn test_increment_workload() {
+        let (env, _admin, client) = setup();
+        let escrow = Address::generate(&env);
+        client.set_escrow(&escrow);
+
+        let planter = Address::generate(&env);
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+
+        env.set_auths(&[escrow.clone()]);
+        client.inc_work(&planter);
+
+        let record = client.get_planter(&planter).unwrap();
+        assert_eq!(record.workload, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #6)")]
+    fn test_increment_workload_at_capacity() {
+        let (env, _admin, client) = setup();
+        let escrow = Address::generate(&env);
+        client.set_escrow(&escrow);
+
+        let planter = Address::generate(&env);
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+        client.set_capacity(&planter, &2u32);
+
+        env.set_auths(&[escrow.clone()]);
+        client.inc_work(&planter);
+        client.inc_work(&planter);
+        client.inc_work(&planter);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #7)")]
+    fn test_increment_workload_inactive() {
+        let (env, _admin, client) = setup();
+        let escrow = Address::generate(&env);
+        client.set_escrow(&escrow);
+
+        let planter = Address::generate(&env);
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+        client.set_active(&planter, &false);
+
+        env.set_auths(&[escrow.clone()]);
+        client.inc_work(&planter);
+    }
+
+    #[test]
+    fn test_decrement_workload() {
+        let (env, _admin, client) = setup();
+        let escrow = Address::generate(&env);
+        client.set_escrow(&escrow);
+
+        let planter = Address::generate(&env);
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+
+        env.set_auths(&[escrow.clone()]);
+        client.inc_work(&planter);
+        client.inc_work(&planter);
+        client.dec_work(&planter);
+
+        let record = client.get_planter(&planter).unwrap();
+        assert_eq!(record.workload, 1);
+        assert_eq!(record.total_trees_planted, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #8)")]
+    fn test_decrement_workload_zero() {
+        let (env, _admin, client) = setup();
+        let escrow = Address::generate(&env);
+        client.set_escrow(&escrow);
+
+        let planter = Address::generate(&env);
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+
+        env.set_auths(&[escrow.clone()]);
+        client.dec_work(&planter);
+    }
+
+    #[test]
+    fn test_set_active_toggles_availability() {
+        let (env, _admin, client) = setup();
+        let planter = Address::generate(&env);
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+
+        assert_eq!(client.get_avail(&String::from_str(&env, "kenya")).len(), 1);
+        client.set_active(&planter, &false);
+        assert!(client.get_avail(&String::from_str(&env, "kenya")).is_empty());
+    }
+
+    #[test]
+    fn test_get_planters_by_region() {
+        let (env, _, client) = setup();
+        let p1 = Address::generate(&env);
+        let p2 = Address::generate(&env);
+        let p3 = Address::generate(&env);
+
+        client.register_planter(&p1, &name_hash(&env, 1), &String::from_str(&env, "kenya"));
+        client.register_planter(&p2, &name_hash(&env, 2), &String::from_str(&env, "kenya"));
+        client.register_planter(&p3, &name_hash(&env, 3), &String::from_str(&env, "india"));
+
+        assert_eq!(client.get_planters_by_region(&String::from_str(&env, "kenya")).len(), 2);
+        assert_eq!(client.get_planters_by_region(&String::from_str(&env, "india")).len(), 1);
     }
 }
