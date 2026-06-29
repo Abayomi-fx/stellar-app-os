@@ -73,7 +73,10 @@ pub enum HarvestaError {
     // CompletionPercentageOutOfRange = 45,
     // TotalReleasedExceedsMilestone = 46,
 
-    // ── Species registry (62–64) ──────────────────────────────────────────────
+    // ── Nullifier registry (60) ───────────────────────────────────────────────
+    CommitmentAlreadyRegistered = 60,
+
+    // ── Species registry (62─64) ──────────────────────────────────────────────
     Co2MustBePositive = 62,
     MaturityYearsMustBePositive = 63,
     SpeciesNotFound = 64,
