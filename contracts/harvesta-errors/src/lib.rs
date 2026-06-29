@@ -81,4 +81,10 @@ pub enum HarvestaError {
     // ── Arithmetic overflows (80–81) ──────────────────────────────────────────
     TreeTokenMintOverflow = 80,
     TokenUnitOverflow = 81,
+
+    // ── NFT certificate (90–93) ───────────────────────────────────────────────
+    TokenAlreadyMinted = 90,
+    InvalidPlantingDate = 91,
+    TokenNotFound = 92,
+    NotTokenOwner = 93,
 }

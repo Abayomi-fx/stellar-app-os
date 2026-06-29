@@ -54,9 +54,11 @@ pub enum ProposalType {
 pub enum ProposalStatus {
     Active,
     Passed,
+    Queued,
     Rejected,
     Executed,
     Expired,
+    Canceled,
 }
 
 /// Vote option for multi-choice proposals
@@ -163,11 +165,31 @@ fn vote_key(proposal_id: u64, voter: &Address) -> (Symbol, u64, Address) {
     (symbol_short!("VOTE"), proposal_id, voter.clone())
 }
 
+fn queued_proposal_key(proposal_id: u64) -> (Symbol, u64) {
+    (symbol_short!("QUEUED"), proposal_id)
+}
+
+/// Record of a proposal queued for timelock execution.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct QueuedProposal {
+    /// Unique proposal ID
+    pub proposal_id: u64,
+    /// Timestamp when the proposal was queued
+    pub queued_at: u64,
+    /// Earliest execution timestamp (after timelock)
+    pub executable_at: u64,
+    /// True if the queued proposal was canceled by an admin
+    pub canceled: bool,
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_QUORUM_PERCENTAGE: u64 = 10; // 10%
 const DEFAULT_TIMELOCK_SECONDS: u64 = 172800; // 48 hours
+#[allow(dead_code)]
 const DEFAULT_PLATFORM_FEE: u64 = 5; // 5%
+#[allow(dead_code)]
 const DEFAULT_MIN_PLANTING_BOND: i128 = 1_000_000; // 1M tokens
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -257,12 +279,6 @@ impl PlatformGovernance {
             .get(&proposal_count_key())
             .unwrap_or(0);
         
-        let timelock: u64 = env
-            .storage()
-            .instance()
-            .get(&timelock_seconds_key())
-            .expect("not initialized");
-
         let now = env.ledger().timestamp();
         
         // Initialize tally for each option
@@ -285,7 +301,7 @@ impl PlatformGovernance {
             total_votes: 0,
             created_at: now,
             voting_ends_at: now + voting_period,
-            executable_at: now + voting_period + timelock,
+            executable_at: 0,
         };
 
         env.storage()
@@ -389,12 +405,10 @@ impl PlatformGovernance {
         if proposal.total_votes >= quorum_threshold {
             // Check if there's a winning option (simple majority)
             let mut max_votes = 0i128;
-            let mut winning_option_id = 0u32;
             
             for tally_entry in proposal.tally.iter() {
                 if tally_entry.votes > max_votes {
                     max_votes = tally_entry.votes;
-                    winning_option_id = tally_entry.option_id;
                 }
             }
             
@@ -414,10 +428,10 @@ impl PlatformGovernance {
         );
     }
 
-    /// Execute a passed proposal to update platform parameters.
+    /// Queue a passed proposal for execution after the timelock delay.
     ///
-    /// `proposal_id` — proposal to execute
-    pub fn execute(env: Env, proposal_id: u64) {
+    /// `proposal_id` — proposal that has passed voting
+    pub fn queue(env: Env, proposal_id: u64) {
         Self::assert_not_paused(&env);
 
         let mut proposal: ProposalRecord = env
@@ -430,8 +444,102 @@ impl PlatformGovernance {
             panic!("proposal has not passed");
         }
 
+        let timelock: u64 = env
+            .storage()
+            .instance()
+            .get(&timelock_seconds_key())
+            .expect("not initialized");
+
         let now = env.ledger().timestamp();
-        if now < proposal.executable_at {
+        let executable_at = now + timelock;
+
+        proposal.status = ProposalStatus::Queued;
+        proposal.executable_at = executable_at;
+        env.storage()
+            .persistent()
+            .set(&proposal_key(proposal_id), &proposal);
+
+        let queued = QueuedProposal {
+            proposal_id,
+            queued_at: now,
+            executable_at,
+            canceled: false,
+        };
+        env.storage()
+            .persistent()
+            .set(&queued_proposal_key(proposal_id), &queued);
+
+        env.events().publish(
+            (symbol_short!("proposal"), symbol_short!("queued")),
+            (proposal_id, executable_at),
+        );
+    }
+
+    /// Cancel a queued proposal. Admin only; intended for emergencies.
+    ///
+    /// `proposal_id` — queued proposal to cancel
+    pub fn cancel_queued_proposal(env: Env, proposal_id: u64) {
+        Self::require_admin(&env);
+
+        let mut proposal: ProposalRecord = env
+            .storage()
+            .persistent()
+            .get(&proposal_key(proposal_id))
+            .expect("proposal not found");
+
+        if proposal.status != ProposalStatus::Queued {
+            panic!("proposal is not queued");
+        }
+
+        proposal.status = ProposalStatus::Canceled;
+        env.storage()
+            .persistent()
+            .set(&proposal_key(proposal_id), &proposal);
+
+        let mut queued: QueuedProposal = env
+            .storage()
+            .persistent()
+            .get(&queued_proposal_key(proposal_id))
+            .expect("queued record not found");
+        queued.canceled = true;
+        env.storage()
+            .persistent()
+            .set(&queued_proposal_key(proposal_id), &queued);
+
+        env.events().publish(
+            (symbol_short!("proposal"), symbol_short!("canceled")),
+            proposal_id,
+        );
+    }
+
+    /// Execute a queued proposal to update platform parameters.
+    ///
+    /// `proposal_id` — proposal to execute
+    pub fn execute(env: Env, proposal_id: u64) {
+        Self::assert_not_paused(&env);
+
+        let mut proposal: ProposalRecord = env
+            .storage()
+            .persistent()
+            .get(&proposal_key(proposal_id))
+            .expect("proposal not found");
+
+        if proposal.status != ProposalStatus::Queued {
+            panic!("proposal is not queued");
+        }
+
+        let queued: QueuedProposal = env
+            .storage()
+            .persistent()
+            .get(&queued_proposal_key(proposal_id))
+            .expect("queued record not found");
+
+        if queued.canceled {
+            panic!("proposal has been canceled");
+        }
+
+        let now = env.ledger().timestamp();
+        if now < queued.executable_at {
             panic!("timelock period has not elapsed");
         }
 
@@ -548,6 +656,21 @@ impl PlatformGovernance {
             .expect("not initialized")
     }
 
+    /// Returns true if governance operations are paused.
+    pub fn is_paused(env: Env) -> bool {
+        env.storage()
+            .instance()
+            .get(&symbol_short!("PAUSED"))
+            .unwrap_or(false)
+    }
+
+    /// Returns the queued record for a proposal, if any.
+    pub fn get_queued_proposal(env: Env, proposal_id: u64) -> Option<QueuedProposal> {
+        env.storage()
+            .persistent()
+            .get(&queued_proposal_key(proposal_id))
+    }
+
     // ── Admin functions ───────────────────────────────────────────────────────
 
     /// Update the quorum percentage. Admin only.
@@ -569,11 +692,27 @@ impl PlatformGovernance {
         if new_timelock == 0 {
             panic!("timelock must be > 0");
         }
+        // Enforce a minimum timelock of 48 hours to protect the community.
+        if new_timelock < DEFAULT_TIMELOCK_SECONDS {
+            panic!("timelock must be at least 48 hours");
+        }
         env.storage()
             .instance()
             .set(&timelock_seconds_key(), &new_timelock);
         env.events()
             .publish((symbol_short!("timelock"),), new_timelock);
+    }
+
+    /// Pause or unpause governance operations. Admin only.
+    pub fn set_paused(env: Env, paused: bool) {
+        Self::require_admin(&env);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("PAUSED"), &paused);
+        env.events().publish(
+            (symbol_short!("paused"),),
+            paused,
+        );
     }
 
     /// Directly set platform fee (emergency override). Admin only.
@@ -816,8 +955,11 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_passed_proposal() {
+    fn test_queue_and_execute_passed_proposal() {
         let (env, admin, _, _, client) = setup();
+
+        // Lower quorum so a single voter can pass the proposal.
+        client.update_quorum_percentage(&1);
 
         let description_hash = String::from_str(&env, "hash123");
         let proposal_type = ProposalType::PlatformFee;
@@ -828,22 +970,52 @@ mod tests {
             description: String::from_str(&env, "Set fee to 10%"),
         });
 
-        client.create_proposal(&description_hash, &proposal_type, &options, &1, &admin); // 1 second voting period
-        
-        // Vote with admin (single vote for simplicity)
+        client.create_proposal(&description_hash, &proposal_type, &options, &1, &admin);
         client.vote(&0, &1, &admin);
 
-        // Wait for voting period and timelock to pass
-        env.ledger().set_timestamp(env.ledger().timestamp() + 200000);
-
         let proposal = client.get_proposal(&0);
-        // Note: With single vote, quorum won't be met, so proposal won't pass
-        // This test verifies the execution flow when quorum is met
-        // In production, multiple voters would participate
+        assert!(matches!(proposal.status, ProposalStatus::Passed));
+
+        // Queue the proposal and verify the timelock is set.
+        client.queue(&0);
+        let queued = client.get_queued_proposal(&0).unwrap();
+        assert!(matches!(client.get_proposal(&0).status, ProposalStatus::Queued));
+        assert_eq!(queued.executable_at, env.ledger().timestamp() + DEFAULT_TIMELOCK_SECONDS);
+
+        // Advance ledger past the timelock.
+        env.ledger().set_timestamp(queued.executable_at + 1);
+
+        client.execute(&0);
+        let executed = client.get_proposal(&0);
+        assert!(matches!(executed.status, ProposalStatus::Executed));
     }
 
     #[test]
-    #[should_panic(expected = "proposal has not passed")]
+    #[should_panic(expected = "timelock period has not elapsed")]
+    fn test_execute_before_timelock_rejected() {
+        let (env, admin, _, _, client) = setup();
+
+        client.update_quorum_percentage(&1);
+
+        let description_hash = String::from_str(&env, "hash123");
+        let proposal_type = ProposalType::PlatformFee;
+        
+        let mut options = Vec::new(&env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(&env, "Set fee to 10%"),
+        });
+
+        client.create_proposal(&description_hash, &proposal_type, &options, &1, &admin);
+        client.vote(&0, &1, &admin);
+        client.queue(&0);
+
+        // Try to execute immediately, before the timelock elapses.
+        client.execute(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "proposal is not queued")]
     fn test_execute_failed_proposal_rejected() {
         let (env, admin, _, _, client) = setup();
 
@@ -858,8 +1030,52 @@ mod tests {
 
         client.create_proposal(&description_hash, &proposal_type, &options, &1, &admin);
         
-        // Try to execute without meeting quorum
+        // Try to execute a proposal that never reached Queued status.
         client.execute(&0);
+    }
+
+    #[test]
+    fn test_cancel_queued_proposal() {
+        let (env, admin, _, _, client) = setup();
+
+        client.update_quorum_percentage(&1);
+
+        let description_hash = String::from_str(&env, "hash123");
+        let proposal_type = ProposalType::PlatformFee;
+        
+        let mut options = Vec::new(&env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(&env, "Set fee to 10%"),
+        });
+
+        client.create_proposal(&description_hash, &proposal_type, &options, &1, &admin);
+        client.vote(&0, &1, &admin);
+        client.queue(&0);
+
+        client.cancel_queued_proposal(&0);
+        let canceled = client.get_proposal(&0);
+        assert!(matches!(canceled.status, ProposalStatus::Canceled));
+        assert!(client.get_queued_proposal(&0).unwrap().canceled);
+    }
+
+    #[test]
+    #[should_panic(expected = "timelock must be at least 48 hours")]
+    fn test_update_timelock_minimum_enforced() {
+        let (_, _admin, _, _, client) = setup();
+
+        client.update_timelock(&(DEFAULT_TIMELOCK_SECONDS - 1));
+    }
+
+    #[test]
+    fn test_set_paused() {
+        let (_, admin, _, _, client) = setup();
+
+        client.set_paused(&true);
+        assert!(client.is_paused());
+
+        client.set_paused(&false);
+        assert!(!client.is_paused());
     }
 
     #[test]
