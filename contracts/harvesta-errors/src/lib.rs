@@ -57,10 +57,15 @@ pub enum HarvestaError {
     // TreeNotOpenForRelease = 33,
     // NoFundsToRelease = 34,
 
-    // ── Farmer registry (35–37) ───────────────────────────────────────────────
-    // FarmerAlreadyRegistered = 35,
-    // FarmerNotRegistered = 36,
-    // InvalidRegion = 37,
+    // ── Farmer registry (35–37, 65) ───────────────────────────────────────────
+    FarmerAlreadyRegistered = 35,
+    FarmerNotRegistered = 36,
+    InvalidRegion = 37,
+    /// Caller is not a registered validator — gated read/write denied.
+    NotValidator = 65,
+    /// The SHA-256 hash supplied by the caller does not match the one stored
+    /// on-chain for this farmer's identity document.
+    HashMismatch = 66,
 
     // ── Dispute / arbiter (38–46) ─────────────────────────────────────────────
     // DisputeAlreadyOpen = 38,
@@ -73,10 +78,28 @@ pub enum HarvestaError {
     // CompletionPercentageOutOfRange = 45,
     // TotalReleasedExceedsMilestone = 46,
 
-    // ── Species registry (62–64) ──────────────────────────────────────────────
+    // ── Species registry (62–66) ──────────────────────────────────────────────
     Co2MustBePositive = 62,
     MaturityYearsMustBePositive = 63,
     SpeciesNotFound = 64,
+    InvasiveSpecies = 65,
+    HighWaterUse = 66,
+
+    // ── Carbon marketplace (100–107) ───────────────────────────────────────────
+    ListingAmountMustBePositive = 100,
+    PriceMustBePositive = 101,
+    ListingNotFound = 102,
+    ListingNotActive = 103,
+    InsufficientLiquidity = 104,
+    BuyAmountMustBePositive = 105,
+    SelfTrade = 106,
+    InvalidPriceRange = 107,
+    InvalidDecayRate = 108,
+    InvalidDuration = 109,
+    AuctionNotFound = 110,
+    AuctionNotActive = 111,
+    AuctionExpired = 112,
+    BidBelowReservePrice = 113,
 
     // ── Arithmetic overflows (80–81) ──────────────────────────────────────────
     TreeTokenMintOverflow = 80,

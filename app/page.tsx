@@ -14,12 +14,11 @@ import {
   CardDescription,
   CardContent,
 } from '@/components/molecules/Card';
-import { useToast } from '@/hooks/useToast';
 import { TransactionHistoryModal } from '@/components/ui/TransactionHistoryModal';
+import { useToast } from '@/hooks/useToast';
 import { useAppTranslation } from '@/hooks/useTranslation';
-import { LandingHero } from '@/components/organisms/LandingHero';
 
-export default function Home(): JSX.Element {
+export default function HomePage(): JSX.Element {
   const [showTx, setShowTx] = useState(false);
   const { addToast } = useToast();
   const { t } = useAppTranslation();
