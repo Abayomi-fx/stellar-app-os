@@ -1,6 +1,6 @@
 #![no_std]
 
-//! Species Registry — Closes #554
+//! Species Registry — Closes #554, #645
 //!
 //! On-chain catalogue of tree species with FAO/IPCC Tier-1 CO₂ sequestration
 //! rates.  The off-chain seeder (`scripts/seed-species.mjs`) calls
@@ -9,19 +9,21 @@
 //! # Storage layout
 //!   Instance:
 //!     ADMIN          — Address   (admin allowed to register/update species)
+//!     INVASIVE       — Vec<Symbol>   (slugs flagged as invasive)
+//!     HIWATER        — Vec<Symbol>   (slugs flagged as high-water-consuming)
 //!   Persistent (keyed by species slug Symbol):
 //!     species:<slug> — SpeciesRecord
 //!
 //! # Functions
 //!   initialize(admin)
-//!   register_species(slug, co2_scaled, maturity_years)   — admin only
+//!   register_species(slug, co2_scaled, maturity_years, is_invasive, is_high_water) — admin only
 //!   get_species(slug) -> SpeciesRecord
 //!   get_co2_rate(slug) -> i128   (co2_kg_per_year × 100)
 
 use harvesta_errors::HarvestaError;
 use soroban_sdk::{
-    contract, contractimpl, contracttype, panic_with_error, symbol_short, Address, Env, String,
-    Symbol,
+    contract, contractimpl, contracttype, panic_with_error, symbol_short, vec, Address, Env,
+    Symbol, Vec,
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -39,6 +41,10 @@ pub struct SpeciesRecord {
     pub maturity_years: u32,
     /// Ledger timestamp of last update
     pub updated_at: u64,
+    /// True if species is classified as highly invasive for dryland savannah
+    pub is_invasive: bool,
+    /// True if species is classified as high-water-consuming for dryland savannah
+    pub is_high_water: bool,
 }
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
@@ -49,6 +55,14 @@ fn admin_key() -> Symbol {
 
 fn species_key(slug: &Symbol) -> (Symbol, Symbol) {
     (symbol_short!("SPECIES"), slug.clone())
+}
+
+fn invasive_key() -> Symbol {
+    symbol_short!("INVASIVE")
+}
+
+fn hiwater_key() -> Symbol {
+    symbol_short!("HIWATER")
 }
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -71,11 +85,18 @@ impl SpeciesRegistry {
     /// * `slug`          — short identifier, e.g. `Symbol::new(&env, "teak")`
     /// * `co2_scaled`    — kg CO₂ per year × 100  (positive integer)
     /// * `maturity_years`— years to biomass maturity
+    /// * `is_invasive`   — true if species is invasive in dryland savannah
+    /// * `is_high_water` — true if species is high-water-consuming
+    ///
+    /// Panics with `InvasiveSpecies` if `is_invasive` is true.
+    /// Panics with `HighWaterUse` if `is_high_water` is true.
     pub fn register_species(
         env: Env,
         slug: Symbol,
         co2_scaled: i128,
         maturity_years: u32,
+        is_invasive: bool,
+        is_high_water: bool,
     ) {
         let admin: Address = env
             .storage()
@@ -91,11 +112,37 @@ impl SpeciesRegistry {
             panic_with_error!(&env, HarvestaError::MaturityYearsMustBePositive);
         }
 
+        // Reject invasive species — store slug in instance list before panicking
+        if is_invasive {
+            let mut list: Vec<Symbol> = env
+                .storage()
+                .instance()
+                .get(&invasive_key())
+                .unwrap_or_else(|| vec![&env]);
+            list.push_back(slug.clone());
+            env.storage().instance().set(&invasive_key(), &list);
+            panic_with_error!(&env, HarvestaError::InvasiveSpecies);
+        }
+
+        // Reject high-water-consuming species
+        if is_high_water {
+            let mut list: Vec<Symbol> = env
+                .storage()
+                .instance()
+                .get(&hiwater_key())
+                .unwrap_or_else(|| vec![&env]);
+            list.push_back(slug.clone());
+            env.storage().instance().set(&hiwater_key(), &list);
+            panic_with_error!(&env, HarvestaError::HighWaterUse);
+        }
+
         let record = SpeciesRecord {
             slug: slug.clone(),
             co2_scaled,
             maturity_years,
             updated_at: env.ledger().timestamp(),
+            is_invasive: false,
+            is_high_water: false,
         };
 
         env.storage()
@@ -221,7 +268,7 @@ mod tests {
         client.initialize(&admin);
 
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         let record = client.get_species(&slug);
         assert_eq!(record.co2_scaled, 2200);
@@ -254,7 +301,7 @@ mod tests {
 
         let admin = Address::generate(&env);
         client.initialize(&admin);
-        client.register_species(&Symbol::new(&env, "bad"), &0_i128, &5_u32);
+        client.register_species(&Symbol::new(&env, "bad"), &0_i128, &5_u32, &false, &false);
     }
 
     #[test]
@@ -267,7 +314,7 @@ mod tests {
 
         let admin = Address::generate(&env);
         client.initialize(&admin);
-        client.register_species(&Symbol::new(&env, "bad"), &2200_i128, &0_u32);
+        client.register_species(&Symbol::new(&env, "bad"), &2200_i128, &0_u32, &false, &false);
     }
 
     // ── CO2 rate tests ─────────────────────────────────────────────────────────────
@@ -284,7 +331,7 @@ mod tests {
 
         // Register teak: 22.00 kg/year → 2200 scaled
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         assert_eq!(client.get_co2_rate(&slug), 2200);
     }
@@ -300,10 +347,10 @@ mod tests {
         client.initialize(&admin);
 
         // Register multiple species with different CO2 rates
-        client.register_species(&Symbol::new(&env, "teak"), &2200_i128, &20_u32);      // 22.00 kg/year
-        client.register_species(&Symbol::new(&env, "moringa"), &900_i128, &3_u32);     // 9.00 kg/year
-        client.register_species(&Symbol::new(&env, "eucalyptus"), &3100_i128, &10_u32); // 31.00 kg/year
-        client.register_species(&Symbol::new(&env, "bamboo"), &3500_i128, &5_u32);   // 35.00 kg/year
+        client.register_species(&Symbol::new(&env, "teak"), &2200_i128, &20_u32, &false, &false);      // 22.00 kg/year
+        client.register_species(&Symbol::new(&env, "moringa"), &900_i128, &3_u32, &false, &false);     // 9.00 kg/year
+        client.register_species(&Symbol::new(&env, "eucalyptus"), &3100_i128, &10_u32, &false, &false); // 31.00 kg/year
+        client.register_species(&Symbol::new(&env, "bamboo"), &3500_i128, &5_u32, &false, &false);   // 35.00 kg/year
 
         assert_eq!(client.get_co2_rate(&Symbol::new(&env, "teak")), 2200);
         assert_eq!(client.get_co2_rate(&Symbol::new(&env, "moringa")), 900);
@@ -322,10 +369,10 @@ mod tests {
         client.initialize(&admin);
 
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         // Update with new values
-        client.register_species(&slug, &2500_i128, &25_u32);
+        client.register_species(&slug, &2500_i128, &25_u32, &false, &false);
 
         let record = client.get_species(&slug);
         assert_eq!(record.co2_scaled, 2500);
@@ -347,7 +394,7 @@ mod tests {
 
         // Teak: 22.00 kg/year → 2200 scaled
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         // 100 trees for 1 year: 22.00 * 100 * 1 = 2200 kg
         let offset = client.calculate_offset(&slug, &100, &1);
@@ -366,7 +413,7 @@ mod tests {
 
         // Teak: 22.00 kg/year → 2200 scaled
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         // 100 trees for 5 years: 22.00 * 100 * 5 = 11000 kg
         let offset = client.calculate_offset(&slug, &100, &5);
@@ -384,9 +431,9 @@ mod tests {
         client.initialize(&admin);
 
         // Register species with different rates
-        client.register_species(&Symbol::new(&env, "teak"), &2200_i128, &20_u32);      // 22.00 kg/year
-        client.register_species(&Symbol::new(&env, "moringa"), &900_i128, &3_u32);     // 9.00 kg/year
-        client.register_species(&Symbol::new(&env, "bamboo"), &3500_i128, &5_u32);    // 35.00 kg/year
+        client.register_species(&Symbol::new(&env, "teak"), &2200_i128, &20_u32, &false, &false);      // 22.00 kg/year
+        client.register_species(&Symbol::new(&env, "moringa"), &900_i128, &3_u32, &false, &false);     // 9.00 kg/year
+        client.register_species(&Symbol::new(&env, "bamboo"), &3500_i128, &5_u32, &false, &false);    // 35.00 kg/year
 
         // 50 trees for 2 years each
         let teak_offset = client.calculate_offset(&Symbol::new(&env, "teak"), &50, &2);
@@ -413,7 +460,7 @@ mod tests {
 
         // Eucalyptus: 31.00 kg/year → 3100 scaled
         let slug = Symbol::new(&env, "eucalyptus");
-        client.register_species(&slug, &3100_i128, &10_u32);
+        client.register_species(&slug, &3100_i128, &10_u32, &false, &false);
 
         // 10,000 trees for 10 years: 31.00 * 10000 * 10 = 3,100,000 kg
         let offset = client.calculate_offset(&slug, &10000, &10);
@@ -432,7 +479,7 @@ mod tests {
         client.initialize(&admin);
 
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         client.calculate_offset(&slug, &0, &5);
     }
@@ -449,7 +496,7 @@ mod tests {
         client.initialize(&admin);
 
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         client.calculate_offset(&slug, &100, &0);
     }
@@ -482,7 +529,7 @@ mod tests {
 
         // Teak: 22.00 kg/year, 20 year maturity
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         // Request 5 years (within maturity): should use 5 years
         let offset = client.calculate_offset_to_maturity(&slug, &100, &5);
@@ -502,7 +549,7 @@ mod tests {
 
         // Moringa: 9.00 kg/year, 3 year maturity
         let slug = Symbol::new(&env, "moringa");
-        client.register_species(&slug, &900_i128, &3_u32);
+        client.register_species(&slug, &900_i128, &3_u32, &false, &false);
 
         // Request 10 years (exceeds maturity): should cap at 3 years
         let offset = client.calculate_offset_to_maturity(&slug, &100, &10);
@@ -522,7 +569,7 @@ mod tests {
 
         // Bamboo: 35.00 kg/year, 5 year maturity
         let slug = Symbol::new(&env, "bamboo");
-        client.register_species(&slug, &3500_i128, &5_u32);
+        client.register_species(&slug, &3500_i128, &5_u32, &false, &false);
 
         // Request exactly 5 years (maturity period)
         let offset = client.calculate_offset_to_maturity(&slug, &50, &5);
@@ -542,7 +589,7 @@ mod tests {
 
         // Baobab: 8.00 kg/year, 50 year maturity
         let slug = Symbol::new(&env, "baobab");
-        client.register_species(&slug, &800_i128, &50_u32);
+        client.register_species(&slug, &800_i128, &50_u32, &false, &false);
 
         // Request 20 years (within 50 year maturity)
         let offset = client.calculate_offset_to_maturity(&slug, &200, &20);
@@ -567,7 +614,7 @@ mod tests {
         client.initialize(&admin);
 
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         client.calculate_offset_to_maturity(&slug, &0, &5);
     }
@@ -584,7 +631,7 @@ mod tests {
         client.initialize(&admin);
 
         let slug = Symbol::new(&env, "teak");
-        client.register_species(&slug, &2200_i128, &20_u32);
+        client.register_species(&slug, &2200_i128, &20_u32, &false, &false);
 
         client.calculate_offset_to_maturity(&slug, &100, &0);
     }
@@ -603,7 +650,7 @@ mod tests {
 
         // Register a species
         let slug = Symbol::new(&env, "mahogany");
-        client.register_species(&slug, &1800_i128, &25_u32); // 18.00 kg/year, 25 year maturity
+        client.register_species(&slug, &1800_i128, &25_u32, &false, &false); // 18.00 kg/year, 25 year maturity
 
         // Verify registration
         let record = client.get_species(&slug);
@@ -634,9 +681,9 @@ mod tests {
         client.initialize(&admin);
 
         // Register species with different CO2 rates
-        client.register_species(&Symbol::new(&env, "shea"), &700_i128, &20_u32);       // 7.00 kg/year
-        client.register_species(&Symbol::new(&env, "pine"), &2500_i128, &15_u32);     // 25.00 kg/year
-        client.register_species(&Symbol::new(&env, "bamboo"), &3500_i128, &5_u32);    // 35.00 kg/year
+        client.register_species(&Symbol::new(&env, "shea"), &700_i128, &20_u32, &false, &false);       // 7.00 kg/year
+        client.register_species(&Symbol::new(&env, "pine"), &2500_i128, &15_u32, &false, &false);     // 25.00 kg/year
+        client.register_species(&Symbol::new(&env, "bamboo"), &3500_i128, &5_u32, &false, &false);    // 35.00 kg/year
 
         // Compare offsets for same tree count and time period
         let tree_count = 100;
@@ -668,7 +715,7 @@ mod tests {
 
         // Register species with fractional CO2 rate (e.g., 12.50 kg/year → 1250 scaled)
         let slug = Symbol::new(&env, "custom");
-        client.register_species(&slug, &1250_i128, &10_u32);
+        client.register_species(&slug, &1250_i128, &10_u32, &false, &false);
 
         // 100 trees for 1 year: 12.50 * 100 * 1 = 1250 kg
         let offset = client.calculate_offset(&slug, &100, &1);
@@ -677,5 +724,71 @@ mod tests {
         // 50 trees for 3 years: 12.50 * 50 * 3 = 1875 kg
         let offset_3yr = client.calculate_offset(&slug, &50, &3);
         assert_eq!(offset_3yr, 1875);
+    }
+
+    // ── Invasive / high-water flag tests ──────────────────────────────────────
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #65)")]
+    fn test_invasive_species_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SpeciesRegistry);
+        let client = SpeciesRegistryClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+
+        // Eucalyptus is invasive in dryland savannah contexts
+        client.register_species(&Symbol::new(&env, "eucalyptus"), &3100_i128, &10_u32, &true, &false);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #66)")]
+    fn test_high_water_species_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SpeciesRegistry);
+        let client = SpeciesRegistryClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+
+        // Sugar cane is high-water-consuming
+        client.register_species(&Symbol::new(&env, "sugarcane"), &1500_i128, &5_u32, &false, &true);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #65)")]
+    fn test_both_flags_invasive_takes_precedence() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SpeciesRegistry);
+        let client = SpeciesRegistryClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+
+        // Both flags set — invasive check runs first
+        client.register_species(&Symbol::new(&env, "bad"), &1000_i128, &5_u32, &true, &true);
+    }
+
+    #[test]
+    fn test_valid_species_registration_with_flags_false() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SpeciesRegistry);
+        let client = SpeciesRegistryClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+
+        let slug = Symbol::new(&env, "shea");
+        client.register_species(&slug, &700_i128, &20_u32, &false, &false);
+
+        let record = client.get_species(&slug);
+        assert_eq!(record.co2_scaled, 700);
+        assert_eq!(record.is_invasive, false);
+        assert_eq!(record.is_high_water, false);
     }
 }

@@ -21,6 +21,8 @@ function getHorizonServer(): Horizon.Server {
 }
 
 /** Map a Stellar payment memo or status string to our TreeStatus enum */
+// Currently unused - keeping for future memo parsing implementation
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function toTreeStatus(raw?: string): TreeStatus {
   const statuses: TreeStatus[] = ['funded', 'planted', 'verified', 'completed', 'failed'];
   const lower = (raw ?? '').toLowerCase();

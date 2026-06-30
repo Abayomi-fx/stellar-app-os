@@ -256,10 +256,10 @@ impl DonationEscrow {
         donor.require_auth();
 
         if amount_per_interval <= 0 {
-            panic_with_error!(&env, HarvestaError::AmountPerIntervalMustBePositive);
+            panic_with_error!(&env, HarvestaError::AmountPerIntervalMustBePos);
         }
         if interval_seconds == 0 {
-            panic_with_error!(&env, HarvestaError::IntervalSecondsMustBePositive);
+            panic_with_error!(&env, HarvestaError::IntervalSecondsMustBePos);
         }
 
         let (xlm, usdc): (Address, Address) = env

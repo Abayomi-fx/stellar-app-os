@@ -53,6 +53,11 @@ pub struct PlanterRecord {
     pub region: String,
     pub score: u32,
     pub registered_at: u64,
+    /// Cumulative sapling survival inputs used to derive `score`.
+    pub saplings_planted: u32,
+    pub saplings_survived: u32,
+    pub verifications_passed: u32,
+    pub verifications_total: u32,
 }
 
 #[contracttype]
@@ -251,6 +256,10 @@ impl PlanterRegistry {
             region,
             score: INITIAL_SCORE,
             registered_at: env.ledger().timestamp(),
+            saplings_planted: 0,
+            saplings_survived: 0,
+            verifications_passed: 0,
+            verifications_total: 0,
         };
 
         env.storage()
@@ -313,6 +322,56 @@ impl PlanterRegistry {
 
         env.events().publish(
             (symbol_short!("ScoreSls"), wallet.clone()),
+            record.score,
+        );
+    }
+
+    /// Record a batch of sapling survival and oracle verification data, then
+    /// recompute the planter's reputation score from cumulative history.
+    ///
+    /// Score (0–100) is weighted: survival rate contributes 70 points and
+    /// verification success rate contributes 30 points.
+    ///
+    /// Only callable by the contract admin.
+    pub fn record_outcome(
+        env: Env,
+        wallet: Address,
+        new_planted: u32,
+        new_survived: u32,
+        verif_passed: u32,
+        verif_total: u32,
+    ) {
+        Self::require_admin(&env);
+
+        let key = Self::planter_key(&env, &wallet);
+        let mut record: PlanterRecord = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotRegistered));
+
+        record.saplings_planted = record.saplings_planted.saturating_add(new_planted);
+        record.saplings_survived = record.saplings_survived.saturating_add(new_survived);
+        record.verifications_passed = record.verifications_passed.saturating_add(verif_passed);
+        record.verifications_total = record.verifications_total.saturating_add(verif_total);
+
+        let survival_score = if record.saplings_planted == 0 {
+            0u32
+        } else {
+            record.saplings_survived.saturating_mul(70) / record.saplings_planted
+        };
+
+        let verification_score = if record.verifications_total == 0 {
+            0u32
+        } else {
+            record.verifications_passed.saturating_mul(30) / record.verifications_total
+        };
+
+        record.score = survival_score.saturating_add(verification_score);
+        env.storage().persistent().set(&key, &record);
+
+        env.events().publish(
+            (symbol_short!("ScoreUpd"), wallet.clone()),
             record.score,
         );
     }
@@ -708,5 +767,77 @@ mod tests {
     fn test_meets_min_score_unregistered_returns_false() {
         let ctx = setup();
         assert!(!ctx.client.meets_min_score(&Address::generate(&ctx.env), &0u32));
+    }
+
+    // ── record_outcome ────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_record_outcome_perfect_scores_to_100() {
+        let (env, _, client) = setup();
+        let planter = Address::generate(&env);
+
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "s1"));
+        // 100 % survival, 100 % verification → 70 + 30 = 100
+        client.record_outcome(&planter, &100, &100, &50, &50);
+
+        let record = client.get_planter(&planter).unwrap();
+        assert_eq!(record.score, 100);
+        assert_eq!(record.saplings_planted, 100);
+        assert_eq!(record.saplings_survived, 100);
+        assert_eq!(record.verifications_passed, 50);
+        assert_eq!(record.verifications_total, 50);
+    }
+
+    #[test]
+    fn test_record_outcome_partial_rates() {
+        let (env, _, client) = setup();
+        let planter = Address::generate(&env);
+
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "s1"));
+        // 50 % survival → 35, 50 % verification → 15, total = 50
+        client.record_outcome(&planter, &100, &50, &10, &20);
+
+        let record = client.get_planter(&planter).unwrap();
+        assert_eq!(record.score, 50);
+    }
+
+    #[test]
+    fn test_record_outcome_accumulates_across_batches() {
+        let (env, _, client) = setup();
+        let planter = Address::generate(&env);
+
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "s1"));
+        // Batch 1: 100 planted, 50 survived; 10 verif, 10 total
+        client.record_outcome(&planter, &100, &50, &10, &10);
+        // Batch 2: 100 more planted, 100 survived; 10 verif, 10 total
+        // Cumulative: 200 planted, 150 survived (75 %), 20/20 verif (100 %)
+        // score = 150*70/200 + 20*30/20 = 52 + 30 = 82
+        client.record_outcome(&planter, &100, &100, &10, &10);
+
+        let record = client.get_planter(&planter).unwrap();
+        assert_eq!(record.saplings_planted, 200);
+        assert_eq!(record.saplings_survived, 150);
+        assert_eq!(record.score, 82);
+    }
+
+    #[test]
+    fn test_record_outcome_zero_verif_total_omits_verification() {
+        let (env, _, client) = setup();
+        let planter = Address::generate(&env);
+
+        client.register_planter(&planter, &name_hash(&env, 1), &String::from_str(&env, "s1"));
+        // No verification data — only survival contributes
+        client.record_outcome(&planter, &100, &80, &0, &0);
+
+        let record = client.get_planter(&planter).unwrap();
+        // 80 % survival → 56, 0 verification → 0, total = 56
+        assert_eq!(record.score, 56);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #4)")]
+    fn test_record_outcome_unregistered_panics() {
+        let (env, _, client) = setup();
+        client.record_outcome(&Address::generate(&env), &10, &10, &5, &5);
     }
 }

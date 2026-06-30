@@ -105,7 +105,7 @@ impl AggregateImpactVerifier {
         // Replay protection — each proof digest must be unique
         let digest_key = Self::digest_key(&env, &proof_digest);
         if env.storage().persistent().has(&digest_key) {
-            panic_with_error!(&env, HarvestaError::ProofDigestAlreadyRegistered);
+            panic_with_error!(&env, HarvestaError::ProofDigestAlreadyReg);
         }
 
         let admin: Address = env

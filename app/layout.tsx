@@ -8,8 +8,7 @@ import { WalletProviderWrapper } from '@/components/providers/WalletProviderWrap
 import { FavoritesProvider } from '@/contexts/FavouritesContext';
 import './globals.css';
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://farmcredit.app';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://farmcredit.app';
 const siteName = 'FarmCredit';
 const siteDescription = 'FarmCredit - Decentralized agricultural credit on Stellar';
 const ogImage = '/icons/icon-512x512.png';
@@ -111,8 +110,11 @@ export default function RootLayout({
               try {
                 var stored = localStorage.getItem('theme');
                 var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                var theme = stored === 'light' || stored === 'dark' ? stored : (prefersDark ? 'dark' : 'light');
-                document.documentElement.classList.toggle('dark', theme === 'dark');
+                var resolved = stored === 'light' ? 'light' : stored === 'dark' ? 'dark' : (prefersDark ? 'dark' : 'light');
+                document.documentElement.classList.toggle('dark', resolved === 'dark');
+                if (stored === 'light' || stored === 'dark' || stored === 'system') {
+                  document.documentElement.dataset.theme = stored;
+                }
                 document.documentElement.classList.add('no-transitions');
                 window.addEventListener('load', function() {
                   document.documentElement.classList.remove('no-transitions');

@@ -15,6 +15,7 @@ import {
 } from '@/components/molecules/Card';
 import { cn } from '@/lib/utils';
 import { hasCompletedOnboardingTour, requestOnboardingTourRestart } from '@/lib/onboardingTour';
+import { PreferencesSection } from '@/components/organisms/settings/PreferencesSection';
 
 type TabId = 'profile' | 'notifications' | 'preferences' | 'danger';
 
@@ -43,13 +44,6 @@ function NotificationSection() {
   return (
     <div>
       <Text variant="muted">Notification settings coming soon.</Text>
-    </div>
-  );
-}
-function PreferencesSection() {
-  return (
-    <div>
-      <Text variant="muted">Preference settings coming soon.</Text>
     </div>
   );
 }

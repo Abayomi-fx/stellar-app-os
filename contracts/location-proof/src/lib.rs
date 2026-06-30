@@ -76,7 +76,7 @@ impl LocationProof {
 
         // Reject duplicate commitments (replay / double-count)
         if env.storage().persistent().has(&commitment) {
-            panic_with_error!(&env, HarvestaError::ProofCommitmentAlreadyRegistered);
+            panic_with_error!(&env, HarvestaError::ProofCommitmentAlreadyReg);
         }
 
         let entry = LocationProofEntry {

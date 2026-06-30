@@ -112,11 +112,22 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
     ][];
   }, [trees]);
 
-  const speciesColors: Record<TreeSpecies, string> = {
+  const speciesColors: Partial<Record<TreeSpecies, string>> = {
     Teak: '#f59e0b',
     Moringa: '#10b981',
     Eucalyptus: '#14b8a6',
     Mangrove: '#06b6d4',
+    Acacia: '#84cc16',
+    Neem: '#22c55e',
+    'African Mahogany': '#a3e635',
+    Baobab: '#bef264',
+    'Bamboo (Moso)': '#d9f99d',
+    'West African Cedar': '#fef08a',
+    'Caribbean Pine': '#fde047',
+    Iroko: '#facc15',
+    Shea: '#eab308',
+    Cashew: '#ca8a04',
+    'African Locust Bean': '#a16207',
   };
 
   const speciesTotal = speciesBreakdown.reduce((s, [, c]) => s + c, 0);

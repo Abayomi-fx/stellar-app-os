@@ -153,6 +153,7 @@ export function FarmerVerificationPortal() {
   const [contractId, setContractId] = useState(defaultContractId);
   const [photo, setPhoto] = useState<File | null>(null);
   const [gps, setGps] = useState<GpsReading | null>(null);
+  const [photoLacksCoordinates, setPhotoLacksCoordinates] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
@@ -167,23 +168,39 @@ export function FarmerVerificationPortal() {
     setGps(null);
     setResult(null);
     setError(null);
+    setPhotoLacksCoordinates(false);
 
     if (!file) return;
 
     try {
       setStatus('reading-photo');
-      const reading = (await exifr.gps(file)) as { latitude?: number; longitude?: number } | null;
+      const reading = (await exifr.parse(file)) as {
+        latitude?: number;
+        longitude?: number;
+        DateTimeOriginal?: Date | string;
+      } | null;
 
       if (typeof reading?.latitude !== 'number' || typeof reading.longitude !== 'number') {
+        setPhotoLacksCoordinates(true);
         throw new Error(
           'This photo does not include GPS metadata. Take a new photo with location enabled.'
         );
       }
 
+      let capturedAt = new Date().toISOString();
+      if (reading.DateTimeOriginal) {
+        const parsedDate = new Date(reading.DateTimeOriginal);
+        if (!isNaN(parsedDate.getTime())) {
+          capturedAt = parsedDate.toISOString();
+        }
+      } else if (file.lastModified) {
+        capturedAt = new Date(file.lastModified).toISOString();
+      }
+
       setGps({
         lat: reading.latitude,
         lon: reading.longitude,
-        capturedAt: new Date().toISOString(),
+        capturedAt,
         source: 'exif',
       });
       setStatus('idle');
@@ -284,7 +301,10 @@ export function FarmerVerificationPortal() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
+      >
         <Card className="rounded-lg shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
@@ -342,13 +362,28 @@ export function FarmerVerificationPortal() {
               </div>
             </label>
 
+            {photoLacksCoordinates && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800" role="alert">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <div>
+                  <p className="text-sm font-semibold">Warning: Missing Location Coordinates</p>
+                  <p className="mt-1 text-xs text-amber-700 leading-relaxed">
+                    This photo does not contain GPS coordinate metadata. Please use a photo taken with GPS location enabled on your device.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {gps && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background p-4">
                 <MapPin className="h-5 w-5 text-stellar-green" />
                 <div>
                   <p className="text-sm font-semibold">GPS metadata found</p>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {gps.lat.toFixed(6)}, {gps.lon.toFixed(6)}
+                  <p className="font-mono text-xs text-muted-foreground text-left">
+                    Location: {gps.lat.toFixed(6)}, {gps.lon.toFixed(6)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 text-left">
+                    Captured At: {new Date(gps.capturedAt).toLocaleString()}
                   </p>
                 </div>
               </div>

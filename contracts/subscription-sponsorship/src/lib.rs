@@ -28,7 +28,7 @@
 //! tree escrows in the tree-escrow contract using those funds.
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, token, Address, Env, Vec,
+    contract, contractimpl, contracttype, symbol_short, token, Address, Env, IntoVal, Vec,
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -236,7 +236,7 @@ impl SubscriptionSponsorship {
 
         // `env.try()` catches panics from the closure and returns `Result<T, Error>`.
         // Since `transfer()` returns `()`, the result is `Result<(), Error>`.
-        match env.try(lock_next) {
+        match env.r#try(lock_next) {
             Ok(_) => {
                 rec.next_processing = now + rec.interval_seconds;
                 // Keep status as Active

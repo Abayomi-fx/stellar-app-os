@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { NewsletterForm } from '@/components/organisms/Footer/NewsletterForm';
+import { LanguageSelector } from '@/components/organisms/Header/LanguageSelector';
 import { FaXTwitter, FaGithub, FaDiscord } from 'react-icons/fa6';
 import { useAppTranslation } from '@/hooks/useTranslation';
 import type { TFunction } from 'i18next';
@@ -12,16 +13,16 @@ interface FooterLink {
   href: string;
 }
 
-interface FooterSection {
-  title: string;
-  links: FooterLink[];
-}
-
 interface SocialLink {
   label: string;
   href: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   ariaLabel: string;
+}
+
+interface FooterSection {
+  title: string;
+  links: FooterLink[];
 }
 
 function buildFooterSections(t: TFunction): FooterSection[] {
@@ -132,24 +133,28 @@ export function Footer(): React.ReactNode {
             {t('footer.copyright', { year: currentYear })}
           </p>
 
-          <ul className="flex gap-4">
-            {socialLinks.map((social) => {
-              const Icon = social.icon;
-              return (
-                <li key={social.label}>
-                  <Link
-                    href={social.href}
-                    target="_blank"
-                    aria-label={social.ariaLabel}
-                    className="flex items-center justify-center w-10 h-10 rounded-lg border border-cyan-500/20 text-stellar-blue hover:bg-cyan-500/10 hover:border-stellar-blue transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-stellar-blue"
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="sr-only">{social.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="flex items-center gap-4">
+            <LanguageSelector variant="desktop" />
+
+            <ul className="flex gap-4">
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <li key={social.label}>
+                    <Link
+                      href={social.href}
+                      target="_blank"
+                      aria-label={social.ariaLabel}
+                      className="flex items-center justify-center w-10 h-10 rounded-lg border border-cyan-500/20 text-stellar-blue hover:bg-cyan-500/10 hover:border-stellar-blue transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-stellar-blue"
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="sr-only">{social.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       </div>
     </footer>
