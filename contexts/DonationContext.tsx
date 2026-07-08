@@ -7,6 +7,7 @@ import {
   type RegionAllocation,
   DEFAULT_DONATION_FLOW_STATE,
 } from '@/lib/types/donor';
+import type { GiftDetails } from '@/lib/types/gift';
 
 interface DonationContextValue {
   state: DonationFlowState;
@@ -15,6 +16,7 @@ interface DonationContextValue {
   setIsMonthly: (_isMonthly: boolean) => void;
   setDonorInfo: (_info: Partial<DonorInfo>) => void;
   setRegionAllocations: (_allocations: RegionAllocation[]) => void;
+  setGift: (_gift: Partial<GiftDetails>) => void;
   resetFlow: () => void;
 }
 
@@ -48,13 +50,37 @@ export function DonationProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, regionAllocations: allocations }));
   }, []);
 
+  const setGift = useCallback((gift: Partial<GiftDetails>) => {
+    setState((prev) => ({ ...prev, gift: { ...prev.gift, ...gift } }));
+  }, []);
+
   const resetFlow = useCallback(() => {
     setState({ ...DEFAULT_DONATION_FLOW_STATE });
   }, []);
 
   const value = useMemo(
-    () => ({ state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, setRegionAllocations, resetFlow }),
-    [state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, setRegionAllocations, resetFlow]
+    () => ({ state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, resetFlow }),
+    [state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, resetFlow]
+    () => ({
+      state,
+      setAmount,
+      setTreeCount,
+      setIsMonthly,
+      setDonorInfo,
+      setRegionAllocations,
+      setGift,
+      resetFlow,
+    }),
+    [
+      state,
+      setAmount,
+      setTreeCount,
+      setIsMonthly,
+      setDonorInfo,
+      setRegionAllocations,
+      setGift,
+      resetFlow,
+    ]
   );
 
   return <DonationContext.Provider value={value}>{children}</DonationContext.Provider>;

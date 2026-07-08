@@ -31,6 +31,13 @@ export interface BuildDonationTransactionRequest {
   walletPublicKey: string;
   network: NetworkType;
   idempotencyKey: string;
+  regionId?: string;
+}
+
+export interface DonationAllocationBreakdown {
+  total: number;
+  planting: number;
+  buffer: number;
 }
 
 export interface DonationAllocationBreakdown {

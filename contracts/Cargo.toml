@@ -1,5 +1,10 @@
 [workspace]
 members = [
+    "contract-utils",
+    "shared",
+    "planter-registry",
+    "planter-blacklist",
+    "escrow",
     "nullifier-registry",
     "escrow-milestone",
     "tree-escrow",
@@ -11,8 +16,18 @@ members = [
     "aggregate-impact-verifier",
     "tree-token",
     "admin-controls",
+    "carbon-credits",
     "kyc-attestation",
     "species-registry",
+    "species-voting",
+    "treasury",
+    "platform-governance",
+    "subscription-sponsorship",
+    "planter-registry",
+    "nft-certificate",
+    "sponsor-receipt",
+    "carbon-marketplace",
+    "tree-registry",
 ]
 resolver = "2"
 

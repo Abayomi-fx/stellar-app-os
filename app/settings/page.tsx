@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,8 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/Card';
-import { cn } from '@/lib/utils';
 import { hasCompletedOnboardingTour, requestOnboardingTourRestart } from '@/lib/onboardingTour';
+import { PreferencesSection } from '@/components/organisms/settings/PreferencesSection';
 
 type TabId = 'profile' | 'notifications' | 'preferences' | 'danger';
 
@@ -46,13 +45,6 @@ function NotificationSection() {
     </div>
   );
 }
-function PreferencesSection() {
-  return (
-    <div>
-      <Text variant="muted">Preference settings coming soon.</Text>
-    </div>
-  );
-}
 function DeleteAccountSection() {
   return (
     <div>
@@ -77,7 +69,7 @@ export default function SettingsPage(): ReactNode {
   };
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-10">
+    <main id="main-content" className="container mx-auto max-w-3xl px-4 py-10">
       <div className="mb-8">
         <Text variant="h2" as="h1" className="mb-2">
           Settings
@@ -125,8 +117,6 @@ export default function SettingsPage(): ReactNode {
                       )}
                     />
                     <span className="hidden sm:inline">{item.label}</span>
-
-                    <span className="sm:hidden">{item.icon}</span>
                   </button>
                 ))}
               </nav>
@@ -170,6 +160,6 @@ export default function SettingsPage(): ReactNode {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

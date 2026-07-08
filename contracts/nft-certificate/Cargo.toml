@@ -1,0 +1,16 @@
+[package]
+name = "nft-certificate"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "21.0.0"
+harvesta-errors = { path = "../harvesta-errors" }
+contract-utils = { path = "../contract-utils" }
+
+[dev-dependencies]
+soroban-sdk = { version = "21.0.0", features = ["testutils"] }

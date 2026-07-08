@@ -1,9 +1,12 @@
+'use client';
+
+import { type JSX, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/atoms/Button';
 import { Text } from '@/components/atoms/Text';
-import { Badge } from '@/components/atoms/Badge';
 import { Counter } from '@/components/atoms/Counter';
 import { OnboardingTour } from '@/components/organisms/OnboardingTour/OnboardingTour';
+import { LandingHero } from '@/components/organisms/LandingHero';
 import SocialShareButtons from '@/components/SocialShareButtons';
 import {
   Card,
@@ -12,13 +15,27 @@ import {
   CardDescription,
   CardContent,
 } from '@/components/molecules/Card';
+import { TransactionHistoryModal } from '@/components/ui/TransactionHistoryModal';
+import { EventSimulator } from '@/components/organisms/EventSimulator/EventSimulator';
+import { useToast } from '@/hooks/useToast';
+import { useAppTranslation } from '@/hooks/useTranslation';
+
+export default function HomePage(): JSX.Element {
+  const [showTx, setShowTx] = useState(false);
+  const { addToast } = useToast();
+  const { t } = useAppTranslation();
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
-      <header className="flex w-full max-w-6xl items-center justify-between">
-        <Text variant="h4" className="font-semibold">
-          FarmCredit
+    <main
+      id="main-content"
+      className="flex min-h-screen flex-col items-center justify-center gap-8 p-8"
+    >
+      <div data-tour-id="hero-section" className="flex flex-col items-center gap-4 text-center">
+        <Badge variant="default">Powered by Stellar</Badge>
+        <Text variant="h1">FarmCredit</Text>
+        <Text variant="muted" className="max-w-md">
+          Decentralized agricultural credit platform built on the Stellar network.
         </Text>
         <Button asChild variant="default" size="sm">
           <Link href="/api-docs">API Docs</Link>
@@ -31,6 +48,8 @@ export default function HomePage() {
         <Text variant="muted" className="max-w-md">
           A decentralized agricultural credit platform built on Stellar
         </Text>
+      <div data-tour-id="hero-section">
+        <LandingHero />
       </div>
 
       {/* Platform Stats */}
@@ -71,6 +90,16 @@ export default function HomePage() {
           </Button>
           <Button asChild variant="outline" size="lg" className="w-full">
             <Link href="/dashboard/farmer">Farmer Dashboard</Link>
+            <Link href="/blog">{t('home.readBlog')}</Link>
+          </Button>
+          <Button
+            data-tour-id="purchase-credits-button"
+            asChild
+            variant="outline"
+            size="lg"
+            className="w-full"
+          >
+            <Link href="/credits/purchase">Purchase Carbon Credits</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="w-full">
             <Link href="/blog">Read Blog</Link>
@@ -99,6 +128,6 @@ export default function HomePage() {
       </Card>
 
       <OnboardingTour />
-    </div>
+    </main>
   );
 }

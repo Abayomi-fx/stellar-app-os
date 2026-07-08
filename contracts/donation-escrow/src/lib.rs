@@ -1,8 +1,25 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, token, Address, Env, IntoVal, Vec,
+    contract, contractimpl, contracttype, contracterror, panic_with_error, symbol_short, token,
+    Address, Env, IntoVal, Vec,
 };
+use harvesta_errors::HarvestaError;
+
+#[contracterror]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum DonationError {
+    UnsupportedToken = 71,
+    AlreadyProcessed = 72,
+    AmountPerIntervalMustBePos = 73,
+    DonationCancelled = 74,
+    IntervalNotElapsed = 75,
+    IntervalSecondsMustBePos = 76,
+    RecurringDonationNotFound = 77,
+    ProjectNotRegistered = 78,
+    NotDonor = 79,
+    DonationAlreadyCancelled = 82,
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -54,7 +71,7 @@ impl DonationEscrow {
     /// Initialize contract
     pub fn initialize(env: Env, admin: Address, xlm_token: Address, usdc_token: Address) {
         if env.storage().instance().has(&symbol_short!("ADMIN")) {
-            panic!("already initialized");
+            panic_with_error!(&env, HarvestaError::AlreadyInitialized);
         }
 
         env.storage()
@@ -80,22 +97,23 @@ impl DonationEscrow {
         donor.require_auth();
 
         if amount <= 0 {
-            panic!("amount must be positive");
+            panic_with_error!(&env, HarvestaError::AmountMustBePositive);
         }
 
         if tree_count == 0 || tree_count > MAX_TREES {
-            panic!("tree_count must be between 1 and 50");
+            panic_with_error!(&env, HarvestaError::TreeCountMustBePositive);
         }
 
         let (xlm, usdc): (Address, Address) = env
             .storage()
             .instance()
             .get(&symbol_short!("TOKENS"))
-            .expect("not initialized");
+            .unwrap_or_else(|| panic_with_error!(&env, HarvestaError::NotInitialized));
 
         if token != xlm && token != usdc {
-            panic!("unsupported token");
+            panic_with_error!(&env, DonationError::UnsupportedToken);
         }
+        contract_utils::assert_whitelisted(&env, &token);
 
         let (batch_id, seq): (u32, u64) = env
             .storage()
@@ -103,7 +121,7 @@ impl DonationEscrow {
             .get(&symbol_short!("BATCHSEQ"))
             .unwrap();
 
-        let next_seq = seq + 1;
+        let next_seq = seq.checked_add(1).expect("sequence counter overflow");
 
         env.storage()
             .instance()
@@ -144,7 +162,7 @@ impl DonationEscrow {
             .get(&symbol_short!("BATCHSEQ"))
             .unwrap();
 
-        let next_batch = batch_id + 1;
+        let next_batch = batch_id.checked_add(1).expect("batch counter overflow");
 
         env.storage()
             .instance()
@@ -165,10 +183,14 @@ impl DonationEscrow {
 
             let key = Self::donation_key(&env, seq);
 
-            let mut rec: DonationRecord = env.storage().persistent().get(&key).expect("not found");
+            let mut rec: DonationRecord = env
+                .storage()
+                .persistent()
+                .get(&key)
+                .unwrap_or_else(|| panic_with_error!(&env, HarvestaError::EscrowNotFound));
 
             if rec.status != DonationStatus::Pending {
-                panic!("already processed");
+                panic_with_error!(&env, DonationError::AlreadyProcessed);
             }
 
             token::Client::new(&env, &rec.token).transfer(
@@ -192,10 +214,14 @@ impl DonationEscrow {
 
         let key = Self::donation_key(&env, seq);
 
-        let mut rec: DonationRecord = env.storage().persistent().get(&key).expect("not found");
+        let mut rec: DonationRecord = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, HarvestaError::EscrowNotFound));
 
         if rec.status != DonationStatus::Pending {
-            panic!("already processed");
+            panic_with_error!(&env, DonationError::AlreadyProcessed);
         }
 
         token::Client::new(&env, &rec.token).transfer(
@@ -245,28 +271,30 @@ impl DonationEscrow {
         donor.require_auth();
 
         if amount_per_interval <= 0 {
-            panic!("amount_per_interval must be positive");
+            panic_with_error!(&env, DonationError::AmountPerIntervalMustBePos);
         }
         if interval_seconds == 0 {
-            panic!("interval_seconds must be positive");
+            panic_with_error!(&env, DonationError::IntervalSecondsMustBePos);
         }
 
         let (xlm, usdc): (Address, Address) = env
             .storage()
             .instance()
             .get(&symbol_short!("TOKENS"))
-            .expect("not initialized");
+            .unwrap_or_else(|| panic_with_error!(&env, HarvestaError::NotInitialized));
 
         if token != xlm && token != usdc {
-            panic!("unsupported token");
+            panic_with_error!(&env, DonationError::UnsupportedToken);
         }
+        contract_utils::assert_whitelisted(&env, &token);
 
         let id: u64 = env
             .storage()
             .instance()
             .get(&symbol_short!("RECSEQ"))
             .unwrap_or(0u64)
-            + 1;
+            .checked_add(1)
+            .expect("recurring sequence counter overflow");
 
         env.storage().instance().set(&symbol_short!("RECSEQ"), &id);
 
@@ -283,7 +311,7 @@ impl DonationEscrow {
             project_id,
             amount_per_interval,
             interval_seconds,
-            next_release: env.ledger().timestamp() + interval_seconds,
+            next_release: env.ledger().timestamp().checked_add(interval_seconds).expect("next release time overflow"),
             total_released: 0,
             cancelled: false,
         };
@@ -303,21 +331,21 @@ impl DonationEscrow {
             .storage()
             .persistent()
             .get(&key)
-            .expect("recurring donation not found");
+            .unwrap_or_else(|| panic_with_error!(&env, DonationError::RecurringDonationNotFound));
 
         if rec.cancelled {
-            panic!("CancelledDonation");
+            panic_with_error!(&env, DonationError::DonationCancelled);
         }
 
         if env.ledger().timestamp() < rec.next_release {
-            panic!("IntervalNotElapsed");
+            panic_with_error!(&env, DonationError::IntervalNotElapsed);
         }
 
         let project: Address = env
             .storage()
             .instance()
             .get(&Self::project_key(&env, rec.project_id))
-            .expect("project not registered");
+            .unwrap_or_else(|| panic_with_error!(&env, DonationError::ProjectNotRegistered));
 
         token::Client::new(&env, &rec.token).transfer(
             &env.current_contract_address(),
@@ -325,8 +353,8 @@ impl DonationEscrow {
             &rec.amount_per_interval,
         );
 
-        rec.next_release += rec.interval_seconds;
-        rec.total_released += rec.amount_per_interval;
+        rec.next_release = rec.next_release.checked_add(rec.interval_seconds).expect("next release time overflow");
+        rec.total_released = rec.total_released.checked_add(rec.amount_per_interval).expect("total released overflow");
 
         env.storage().persistent().set(&key, &rec);
 
@@ -351,14 +379,14 @@ impl DonationEscrow {
             .storage()
             .persistent()
             .get(&key)
-            .expect("recurring donation not found");
+            .unwrap_or_else(|| panic_with_error!(&env, DonationError::RecurringDonationNotFound));
 
         if rec.donor != donor {
-            panic!("not the donor");
+            panic_with_error!(&env, DonationError::NotDonor);
         }
 
         if rec.cancelled {
-            panic!("already cancelled");
+            panic_with_error!(&env, DonationError::DonationAlreadyCancelled);
         }
 
         rec.cancelled = true;
@@ -412,9 +440,33 @@ impl DonationEscrow {
             .storage()
             .instance()
             .get(&symbol_short!("ADMIN"))
-            .expect("not initialized");
+            .unwrap_or_else(|| panic_with_error!(env, HarvestaError::NotInitialized));
 
         admin.require_auth();
+    }
+
+    // ── Whitelist management ──────────────────────────────────────────────────
+
+    /// Add `addr` to the contract whitelist. Restricted to admin.
+    pub fn add_to_whitelist(env: Env, addr: Address) {
+        Self::require_admin(&env);
+        contract_utils::add_to_whitelist(&env, &addr);
+    }
+
+    /// Remove `addr` from the contract whitelist. Restricted to admin.
+    pub fn remove_from_whitelist(env: Env, addr: Address) {
+        Self::require_admin(&env);
+        contract_utils::remove_from_whitelist(&env, &addr);
+    }
+
+    /// Returns `true` if `addr` is whitelisted.
+    pub fn is_whitelisted(env: Env, addr: Address) -> bool {
+        contract_utils::is_whitelisted(&env, &addr)
+    }
+
+    /// Panics if `addr` is not whitelisted.
+    pub fn assert_whitelisted(env: Env, addr: Address) {
+        contract_utils::assert_whitelisted(&env, &addr);
     }
 }
 
@@ -452,6 +504,8 @@ mod tests {
         token::StellarAssetClient::new(&env, &usdc).mint(&donor, &100_000);
 
         client.initialize(&admin, &xlm, &usdc);
+        client.add_to_whitelist(&xlm);
+        client.add_to_whitelist(&usdc);
 
         (env, admin, donor, xlm, usdc, client)
     }
@@ -536,7 +590,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "IntervalNotElapsed")]
+    #[should_panic(expected = "Error(Contract, #75)")]
     fn test_process_recurring_fails_before_interval() {
         let (_env, _admin, donor, xlm, _usdc, project_id, client) = setup_recurring_env();
 
@@ -565,7 +619,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "CancelledDonation")]
+    #[should_panic(expected = "Error(Contract, #74)")]
     fn test_process_recurring_on_cancelled_panics() {
         let (env, _admin, donor, xlm, _usdc, project_id, client) = setup_recurring_env();
 
@@ -577,7 +631,7 @@ mod tests {
         // Advance time past interval
         env.ledger().with_mut(|l| l.timestamp += interval + 1);
 
-        // Should panic with CancelledDonation
+        // Should panic with DonationCancelled
         client.process_recurring(&id);
     }
 
