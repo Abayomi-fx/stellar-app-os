@@ -29,11 +29,12 @@
 //! Validator management (`register_validator` / `revoke_validator`) is
 //! restricted to the admin address set at `initialize`.
 
-use harvesta_errors::HarvestaError;
+use harvesta_errors::{HarvestaError, FarmerError};
 use soroban_sdk::{
     contract, contractimpl, contracttype, panic_with_error, symbol_short, Address, Bytes,
     BytesN, Env, IntoVal, String,
 };
+use admin_controls::AdminControlsClient;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -72,7 +73,19 @@ pub struct ProfileHistoryEntry {
     pub updated_at: u64,
 }
 
+/// Represents a geographical farm plot registered by a farmer.
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct FarmPlot {
+    pub plot_id: BytesN<32>,
+    pub farmer_id: Address,
+    pub coordinates: soroban_sdk::Vec<(i64, i64)>,
+    pub area_sqm: u64,
+    pub registered_at: u64,
+}
+
 // ── Contract ──────────────────────────────────────────────────────────────────
+
 
 #[contract]
 pub struct FarmerRegistry;
@@ -81,14 +94,17 @@ pub struct FarmerRegistry;
 impl FarmerRegistry {
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    /// One-time initialisation — stores the admin address.
-    pub fn initialize(env: Env, admin: Address) {
+    /// One-time initialisation — stores the admin address and admin-controls address.
+    pub fn initialize(env: Env, admin: Address, admin_controls: Address) {
         if env.storage().instance().has(&symbol_short!("ADMIN")) {
             panic_with_error!(&env, HarvestaError::AlreadyInitialized);
         }
         env.storage()
             .instance()
             .set(&symbol_short!("ADMIN"), &admin);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("ADMC"), &admin_controls);
     }
 
     // ── Validator management (admin-only) ─────────────────────────────────────
@@ -98,6 +114,7 @@ impl FarmerRegistry {
     /// Only the contract admin may call this.
     /// Emits `(ValidReg, validator)`.
     pub fn register_validator(env: Env, admin: Address, validator: Address) {
+        Self::assert_not_paused(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
@@ -115,6 +132,7 @@ impl FarmerRegistry {
     /// Only the contract admin may call this.
     /// Emits `(ValidRev, validator)`.
     pub fn revoke_validator(env: Env, admin: Address, validator: Address) {
+        Self::assert_not_paused(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
@@ -160,6 +178,7 @@ impl FarmerRegistry {
         doc_preimage: Bytes,
         region_geohash: String,
     ) -> FarmerProfile {
+        Self::assert_not_paused(&env);
         validator.require_auth();
         wallet_address.require_auth();
 
@@ -169,7 +188,7 @@ impl FarmerRegistry {
 
         let key = Self::farmer_key(&env, &wallet_address);
         if env.storage().persistent().has(&key) {
-            panic_with_error!(&env, HarvestaError::FarmerAlreadyRegistered);
+            panic_with_error!(&env, FarmerError::FarmerAlreadyRegistered);
         }
 
         let profile = FarmerProfile {
@@ -223,6 +242,7 @@ impl FarmerRegistry {
         new_doc_preimage: Bytes,
         new_region_geohash: String,
     ) -> FarmerProfile {
+        Self::assert_not_paused(&env);
         validator.require_auth();
         wallet_address.require_auth();
 
@@ -235,7 +255,7 @@ impl FarmerRegistry {
             .storage()
             .persistent()
             .get(&key)
-            .unwrap_or_else(|| panic_with_error!(&env, HarvestaError::FarmerNotRegistered));
+            .unwrap_or_else(|| panic_with_error!(&env, FarmerError::FarmerNotRegistered));
 
         // Increment version counter and archive previous profile
         let version_key = Self::version_counter_key(&env, &wallet_address);
@@ -304,7 +324,7 @@ impl FarmerRegistry {
         env.storage()
             .persistent()
             .get(&Self::farmer_key(&env, &wallet_address))
-            .unwrap_or_else(|| panic_with_error!(&env, HarvestaError::FarmerNotRegistered))
+            .unwrap_or_else(|| panic_with_error!(&env, FarmerError::FarmerNotRegistered))
     }
 
     /// Returns a specific history entry for a farmer by version number.
@@ -347,6 +367,7 @@ impl FarmerRegistry {
     ///
     /// Only the farmer's own wallet may call this.
     pub fn set_available(env: Env, wallet_address: Address, available: bool) {
+        Self::assert_not_paused(&env);
         wallet_address.require_auth();
 
         if !env
@@ -354,7 +375,7 @@ impl FarmerRegistry {
             .persistent()
             .has(&Self::farmer_key(&env, &wallet_address))
         {
-            panic_with_error!(&env, HarvestaError::FarmerNotRegistered);
+            panic_with_error!(&env, FarmerError::FarmerNotRegistered);
         }
 
         let key = Self::availability_key(&env, &wallet_address);
@@ -375,6 +396,80 @@ impl FarmerRegistry {
             .unwrap_or(true)
     }
 
+    // ── Farm Plots ────────────────────────────────────────────────────────────
+
+    /// Register a new geographical farm plot.
+    ///
+    /// # Access
+    /// The farmer's wallet must sign the transaction (`farmer.require_auth()`).
+    ///
+    /// # Errors
+    /// - `InvalidCoordinatesCount` — must have between 3 and 50 coordinates.
+    /// - `PlotAlreadyExists` — `plot_id` already registered.
+    pub fn register_plot(
+        env: Env,
+        farmer: Address,
+        plot_id: BytesN<32>,
+        coordinates: soroban_sdk::Vec<(i64, i64)>,
+        area_sqm: u64,
+    ) {
+        farmer.require_auth();
+
+        let len = coordinates.len();
+        if len < 3 || len > 50 {
+            panic_with_error!(&env, FarmerError::InvalidCoordinatesCount);
+        }
+
+        let plot_key = Self::plot_key(&env, &plot_id);
+        if env.storage().persistent().has(&plot_key) {
+            panic_with_error!(&env, FarmerError::PlotAlreadyExists);
+        }
+
+        let plot = FarmPlot {
+            plot_id: plot_id.clone(),
+            farmer_id: farmer.clone(),
+            coordinates,
+            area_sqm,
+            registered_at: env.ledger().timestamp(),
+        };
+
+        env.storage().persistent().set(&plot_key, &plot);
+
+        let farmer_plots_key = Self::farmer_plots_key(&env, &farmer);
+        let mut farmer_plots: soroban_sdk::Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&farmer_plots_key)
+            .unwrap_or_else(|| soroban_sdk::Vec::new(&env));
+
+        farmer_plots.push_back(plot_id.clone());
+        env.storage().persistent().set(&farmer_plots_key, &farmer_plots);
+
+        env.events().publish(
+            (soroban_sdk::Symbol::new(&env, "PlotRegistered"), farmer),
+            (plot_id, area_sqm),
+        );
+    }
+
+    /// Retrieve all farm plots registered by a specific farmer.
+    pub fn get_plots_by_farmer(env: Env, farmer_id: Address) -> soroban_sdk::Vec<FarmPlot> {
+        let farmer_plots_key = Self::farmer_plots_key(&env, &farmer_id);
+        let plot_ids: soroban_sdk::Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&farmer_plots_key)
+            .unwrap_or_else(|| soroban_sdk::Vec::new(&env));
+
+        let mut plots = soroban_sdk::Vec::new(&env);
+        for i in 0..plot_ids.len() {
+            let id = plot_ids.get(i).unwrap();
+            if let Some(plot) = env.storage().persistent().get::<_, FarmPlot>(&Self::plot_key(&env, &id)) {
+                plots.push_back(plot);
+            }
+        }
+        plots
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     fn require_admin(env: &Env, caller: &Address) {
@@ -388,9 +483,22 @@ impl FarmerRegistry {
         }
     }
 
+    fn admin_controls(env: &Env) -> Address {
+        env.storage()
+            .instance()
+            .get(&symbol_short!("ADMC"))
+            .unwrap_or_else(|| panic_with_error!(env, HarvestaError::NotInitialized))
+    }
+
+    fn assert_not_paused(env: &Env) {
+        let admin_controls_addr = Self::admin_controls(env);
+        let admin_controls_client = AdminControlsClient::new(env, &admin_controls_addr);
+        admin_controls_client.assert_not_paused();
+    }
+
     fn require_validator(env: &Env, caller: &Address) {
         if !Self::_is_validator(env, caller) {
-            panic_with_error!(env, HarvestaError::NotValidator);
+            panic_with_error!(env, FarmerError::NotValidator);
         }
     }
 
@@ -408,7 +516,7 @@ impl FarmerRegistry {
     fn assert_sha256_integrity(env: &Env, preimage: &Bytes, expected_hash: &BytesN<32>) {
         let computed: BytesN<32> = env.crypto().sha256(preimage).into();
         if computed != *expected_hash {
-            panic_with_error!(env, HarvestaError::HashMismatch);
+            panic_with_error!(env, FarmerError::HashMismatch);
         }
     }
 
@@ -420,7 +528,7 @@ impl FarmerRegistry {
                 return;
             }
         }
-        panic_with_error!(env, HarvestaError::InvalidRegion);
+        panic_with_error!(env, FarmerError::InvalidRegion);
     }
 
     fn farmer_key(env: &Env, wallet: &Address) -> soroban_sdk::Val {
@@ -442,6 +550,14 @@ impl FarmerRegistry {
     fn availability_key(env: &Env, wallet: &Address) -> soroban_sdk::Val {
         (symbol_short!("AVAIL"), wallet.clone()).into_val(env)
     }
+
+    fn plot_key(env: &Env, plot_id: &BytesN<32>) -> soroban_sdk::Val {
+        (symbol_short!("PLOT"), plot_id.clone()).into_val(env)
+    }
+
+    fn farmer_plots_key(env: &Env, farmer: &Address) -> soroban_sdk::Val {
+        (symbol_short!("FPLOTS"), farmer.clone()).into_val(env)
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -457,13 +573,19 @@ mod tests {
         let env = Env::default();
         env.mock_all_auths();
 
+        // Deploy admin-controls contract
+        let admin_controls_id = env.register_contract(None, admin_controls::AdminControls);
+        let admin_controls_client = admin_controls::AdminControlsClient::new(&env, &admin_controls_id);
+        let admin = Address::generate(&env);
+        let oracle = Address::generate(&env);
+        admin_controls_client.initialize(&admin, &oracle);
+
         let contract_id = env.register_contract(None, FarmerRegistry);
         let client = FarmerRegistryClient::new(&env, &contract_id);
 
-        let admin = Address::generate(&env);
         let validator = Address::generate(&env);
 
-        client.initialize(&admin);
+        client.initialize(&admin, &admin_controls_id);
         client.register_validator(&admin, &validator);
 
         (env, admin, validator, client)
@@ -498,7 +620,7 @@ mod tests {
 
     #[test]
     fn test_revoke_validator() {
-        let (env, admin, validator, client) = setup();
+        let (_env, admin, validator, client) = setup();
 
         assert!(client.is_validator(&validator));
         client.revoke_validator(&admin, &validator);
@@ -546,7 +668,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #65)")]
+    #[should_panic(expected = "Error(Contract, #6)")]
     fn test_get_farmer_verified_non_validator_rejected() {
         let (env, _, validator, client) = setup();
         let farmer = Address::generate(&env);
@@ -559,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #35)")]
+    #[should_panic(expected = "Error(Contract, #1)")]
     fn test_double_registration_rejected() {
         let (env, _, validator, client) = setup();
         let farmer = Address::generate(&env);
@@ -571,7 +693,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #37)")]
+    #[should_panic(expected = "Error(Contract, #3)")]
     fn test_invalid_region_rejected() {
         let (env, _, validator, client) = setup();
         let farmer = Address::generate(&env);
@@ -581,7 +703,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #65)")]
+    #[should_panic(expected = "Error(Contract, #6)")]
     fn test_register_farmer_non_validator_rejected() {
         let (env, _, _, client) = setup();
         let attacker = Address::generate(&env);
@@ -594,7 +716,7 @@ mod tests {
     // ── SHA-256 integrity ─────────────────────────────────────────────────────
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #66)")]
+    #[should_panic(expected = "Error(Contract, #7)")]
     fn test_hash_mismatch_on_register_rejected() {
         let (env, _, validator, client) = setup();
         let farmer = Address::generate(&env);
@@ -606,7 +728,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #66)")]
+    #[should_panic(expected = "Error(Contract, #7)")]
     fn test_hash_mismatch_on_update_rejected() {
         let (env, _, validator, client) = setup();
         let farmer = Address::generate(&env);
@@ -682,7 +804,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #65)")]
+    #[should_panic(expected = "Error(Contract, #6)")]
     fn test_profile_history_non_validator_rejected() {
         let (env, _, validator, client) = setup();
         let farmer = Address::generate(&env);
@@ -695,7 +817,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #36)")]
+    #[should_panic(expected = "Error(Contract, #2)")]
     fn test_update_profile_unregistered_farmer_rejected() {
         let (env, _, validator, client) = setup();
         let stranger = Address::generate(&env);
@@ -740,7 +862,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Error(Contract, #36)")]
+    #[should_panic(expected = "Error(Contract, #2)")]
     fn test_set_available_unregistered_panics() {
         let (env, _, _, client) = setup();
         let stranger = Address::generate(&env);
@@ -776,5 +898,75 @@ mod tests {
             client.register_farmer(&validator, &farmer, &h, &p, &region(&env, prefix));
             assert!(client.is_registered(&farmer));
         }
+    }
+
+    // ── farm plots ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_register_and_get_plots() {
+        let (env, _, _, client) = setup();
+        let farmer = Address::generate(&env);
+        let plot_id = BytesN::from_array(&env, &[1u8; 32]);
+        
+        let mut coords = soroban_sdk::Vec::new(&env);
+        coords.push_back((1000000, 2000000));
+        coords.push_back((1000000, 2000001));
+        coords.push_back((1000001, 2000000));
+        
+        client.register_plot(&farmer, &plot_id, &coords, &1000);
+        
+        let plots = client.get_plots_by_farmer(&farmer);
+        assert_eq!(plots.len(), 1);
+        
+        let plot = plots.get(0).unwrap();
+        assert_eq!(plot.plot_id, plot_id);
+        assert_eq!(plot.farmer_id, farmer);
+        assert_eq!(plot.area_sqm, 1000);
+        assert_eq!(plot.coordinates.len(), 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #5)")]
+    fn test_invalid_coordinates_count_low() {
+        let (env, _, _, client) = setup();
+        let farmer = Address::generate(&env);
+        let plot_id = BytesN::from_array(&env, &[2u8; 32]);
+        
+        let mut coords = soroban_sdk::Vec::new(&env);
+        coords.push_back((1000000, 2000000));
+        coords.push_back((1000000, 2000001));
+        
+        client.register_plot(&farmer, &plot_id, &coords, &1000);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #5)")]
+    fn test_invalid_coordinates_count_high() {
+        let (env, _, _, client) = setup();
+        let farmer = Address::generate(&env);
+        let plot_id = BytesN::from_array(&env, &[3u8; 32]);
+        
+        let mut coords = soroban_sdk::Vec::new(&env);
+        for i in 0..51 {
+            coords.push_back((i as i64, i as i64));
+        }
+        
+        client.register_plot(&farmer, &plot_id, &coords, &1000);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #4)")]
+    fn test_duplicate_plot_id() {
+        let (env, _, _, client) = setup();
+        let farmer = Address::generate(&env);
+        let plot_id = BytesN::from_array(&env, &[4u8; 32]);
+        
+        let mut coords = soroban_sdk::Vec::new(&env);
+        coords.push_back((1000000, 2000000));
+        coords.push_back((1000000, 2000001));
+        coords.push_back((1000001, 2000000));
+        
+        client.register_plot(&farmer, &plot_id, &coords, &1000);
+        client.register_plot(&farmer, &plot_id, &coords, &1000);
     }
 }

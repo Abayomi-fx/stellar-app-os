@@ -14,6 +14,7 @@ harvesta-errors = { path = "../harvesta-errors" }
 [dev-dependencies]
 contract-utils = { path = "../contract-utils" }
 soroban-sdk = { version = "21.7.7", features = ["testutils", "alloc"] }
+escrow = { path = "../escrow" }
 
 [profile.release]
 opt-level = "z"
