@@ -15,6 +15,8 @@ export async function POST(request: Request) {
       asset = 'USDC',
       slippageTolerance,
     } = body;
+    const { amount, walletPublicKey, network, idempotencyKey, treeCount = 1 } = body;
+    const { amount, walletPublicKey, network, idempotencyKey, treeCount = 1, regionId } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'Invalid donation amount' }, { status: 400 });
@@ -43,6 +45,9 @@ export async function POST(request: Request) {
       treeCount,
       asset,
       slippageTolerance
+      treeCount
+      treeCount,
+      regionId
     );
 
     const perTreeAllocation = calculateDonationAllocation(amount);

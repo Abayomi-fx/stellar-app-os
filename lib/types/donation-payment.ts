@@ -39,6 +39,13 @@ export interface BuildDonationTransactionRequest {
   idempotencyKey: string;
   asset?: DonationAsset; // payment asset (default 'USDC'); 'XLM' is converted on-chain
   slippageTolerance?: number; // optional override for XLM conversion slippage (e.g. 0.02 = 2%)
+  regionId?: string;
+}
+
+export interface DonationAllocationBreakdown {
+  total: number;
+  planting: number;
+  buffer: number;
 }
 
 export interface DonationAllocationBreakdown {

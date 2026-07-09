@@ -4,9 +4,11 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 import {
   type DonationFlowState,
   type DonorInfo,
+  type RegionAllocation,
   DEFAULT_DONATION_FLOW_STATE,
 } from '@/lib/types/donor';
 import type { DonationAsset } from '@/lib/types/donation-payment';
+import type { GiftDetails } from '@/lib/types/gift';
 
 interface DonationContextValue {
   state: DonationFlowState;
@@ -15,6 +17,8 @@ interface DonationContextValue {
   setIsMonthly: (_isMonthly: boolean) => void;
   setAsset: (_asset: DonationAsset) => void;
   setDonorInfo: (_info: Partial<DonorInfo>) => void;
+  setRegionAllocations: (_allocations: RegionAllocation[]) => void;
+  setGift: (_gift: Partial<GiftDetails>) => void;
   resetFlow: () => void;
 }
 
@@ -48,6 +52,14 @@ export function DonationProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const setRegionAllocations = useCallback((allocations: RegionAllocation[]) => {
+    setState((prev) => ({ ...prev, regionAllocations: allocations }));
+  }, []);
+
+  const setGift = useCallback((gift: Partial<GiftDetails>) => {
+    setState((prev) => ({ ...prev, gift: { ...prev.gift, ...gift } }));
+  }, []);
+
   const resetFlow = useCallback(() => {
     setState({ ...DEFAULT_DONATION_FLOW_STATE });
   }, []);
@@ -55,6 +67,28 @@ export function DonationProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({ state, setAmount, setTreeCount, setIsMonthly, setAsset, setDonorInfo, resetFlow }),
     [state, setAmount, setTreeCount, setIsMonthly, setAsset, setDonorInfo, resetFlow]
+    () => ({ state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, resetFlow }),
+    [state, setAmount, setTreeCount, setIsMonthly, setDonorInfo, resetFlow]
+    () => ({
+      state,
+      setAmount,
+      setTreeCount,
+      setIsMonthly,
+      setDonorInfo,
+      setRegionAllocations,
+      setGift,
+      resetFlow,
+    }),
+    [
+      state,
+      setAmount,
+      setTreeCount,
+      setIsMonthly,
+      setDonorInfo,
+      setRegionAllocations,
+      setGift,
+      resetFlow,
+    ]
   );
 
   return <DonationContext.Provider value={value}>{children}</DonationContext.Provider>;
