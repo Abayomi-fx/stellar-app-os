@@ -116,21 +116,25 @@ export function DonationConfirmationWithTx({ txHash }: DonationConfirmationWithT
       try {
         setLoading(true);
         // Fetch from Horizon API
-        const horizonUrl = process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org';
+        const horizonUrl =
+          process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org';
         const response = await fetch(`${horizonUrl}/transactions/${txHash}`);
-        
+
         if (!response.ok) {
           throw new Error('Transaction not found');
         }
 
         const data = await response.json();
-        
+
         // Parse transaction operations to get payment details
         const opsResponse = await fetch(`${horizonUrl}/transactions/${txHash}/operations`);
         const opsData = await opsResponse.json();
-        
+
         const paymentOp = opsData._embedded?.records?.find(
-          (op: any) => op.type === 'payment' || op.type === 'path_payment_strict_send' || op.type === 'path_payment_strict_receive'
+          (op: any) =>
+            op.type === 'payment' ||
+            op.type === 'path_payment_strict_send' ||
+            op.type === 'path_payment_strict_receive'
         );
 
         const amount = paymentOp?.amount ? parseFloat(paymentOp.amount) : 0;
@@ -162,7 +166,7 @@ export function DonationConfirmationWithTx({ txHash }: DonationConfirmationWithT
 
   const handleExportReceipt = async () => {
     if (!receiptRef.current) return;
-    
+
     setIsExporting(true);
     try {
       const canvas = await html2canvas(receiptRef.current, {
@@ -170,11 +174,11 @@ export function DonationConfirmationWithTx({ txHash }: DonationConfirmationWithT
         scale: 2,
         logging: false,
       });
-      
+
       const blob = await new Promise<Blob>((resolve) => {
         canvas.toBlob((b) => resolve(b!), 'image/png');
       });
-      
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -209,10 +213,7 @@ export function DonationConfirmationWithTx({ txHash }: DonationConfirmationWithT
   };
 
   const handleShareWhatsApp = () => {
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
-      '_blank'
-    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`, '_blank');
   };
 
   if (loading) {
@@ -234,7 +235,7 @@ export function DonationConfirmationWithTx({ txHash }: DonationConfirmationWithT
           <Text variant="muted" className="mb-6">
             {error || 'Unable to load transaction details.'}
           </Text>
-          <Button onClick={() => window.location.href = '/donate'} stellar="primary">
+          <Button onClick={() => (window.location.href = '/donate')} stellar="primary">
             Make a Donation
           </Button>
         </div>
@@ -373,12 +374,7 @@ export function DonationConfirmationWithTx({ txHash }: DonationConfirmationWithT
               )}
             </Button>
 
-            <Button
-              onClick={handleCopyLink}
-              variant="outline"
-              size="lg"
-              className="h-12"
-            >
+            <Button onClick={handleCopyLink} variant="outline" size="lg" className="h-12">
               {linkCopied ? (
                 <>
                   <Check className="w-4 h-4 mr-2" />

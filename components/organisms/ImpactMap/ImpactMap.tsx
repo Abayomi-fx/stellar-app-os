@@ -9,8 +9,10 @@ import type { Tree, TreeStatus } from '@/lib/types/tree';
 import 'leaflet/dist/leaflet.css';
 
 interface ImpactMapProps {
-  regions: RegionMarker[];
+  regions?: RegionMarker[];
   trees?: Tree[];
+  center?: [number, number];
+  zoom?: number;
 }
 
 function radiusForTrees(trees: number): number {
@@ -36,12 +38,16 @@ function ZoomTracker({ onZoom }: { onZoom: (_zoom: number) => void }) {
   return null;
 }
 
-export function ImpactMap({ regions, trees = [] }: ImpactMapProps): JSX.Element {
-  const [zoom, setZoom] = useState(3);
+export function ImpactMap({
+  regions = [],
+  trees = [],
+  center = [5, 20],
+  zoom: initialZoom = 3,
+}: ImpactMapProps): JSX.Element {
+  const [zoom, setZoom] = useState(initialZoom);
   const showIndividualMarkers = zoom >= 7;
 
   const clusters = useMemo(() => clusterTreesByRegion(trees), [trees]);
-
   useEffect(() => {
     void import('leaflet').then((L) => {
       // @ts-expect-error — Leaflet internal
@@ -56,8 +62,8 @@ export function ImpactMap({ regions, trees = [] }: ImpactMapProps): JSX.Element 
 
   return (
     <MapContainer
-      center={[5, 20]}
-      zoom={3}
+      center={center}
+      zoom={zoom}
       scrollWheelZoom={false}
       className="h-full w-full rounded-xl"
       aria-label="Live map of verified trees"
@@ -142,10 +148,7 @@ export function ImpactMap({ regions, trees = [] }: ImpactMapProps): JSX.Element 
                     {tree.species} · {tree.region}
                   </p>
                   <p>{tree.co2OffsetKgPerYear} kg CO₂ / year</p>
-                  <Link
-                    href={`/trees/${tree.id}`}
-                    className="text-stellar-green underline"
-                  >
+                  <Link href={`/trees/${tree.id}`} className="text-stellar-green underline">
                     View tree details
                   </Link>
                 </div>
