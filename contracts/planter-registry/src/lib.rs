@@ -225,6 +225,25 @@ impl PlanterRegistry {
     pub fn get_min_stake(env: Env) -> i128 {
         let (_, _, min_stake) = Self::config(&env);
         min_stake
+            .set(&symbol_short!("ADMIN"), &admin);
+        env.storage()
+            .persistent()
+            .get::<DataKey, PlanterStake>(&DataKey::Stake(planter))
+            .map(|r| r.amount >= min_stake)
+            .unwrap_or(false)
+    }
+
+    /// Returns the stake record for a planter, or None.
+    pub fn get_stake(env: Env, planter: Address) -> Option<PlanterStake> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Stake(planter))
+    }
+
+    /// Returns the configured minimum stake amount.
+    pub fn get_min_stake(env: Env) -> i128 {
+        let (_, _, min_stake) = Self::config(&env);
+        min_stake
     }
 
     /// Register a new planter.

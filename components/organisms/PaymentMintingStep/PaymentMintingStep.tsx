@@ -6,19 +6,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import type { PaymentMintingProps, TransactionStatus } from '@/lib/types/payment';
 
 // Re-export surface types from the canonical source so adjacent files
-// (notably the barrel `index.tsx` in this folder, plus any tests) can
-// still import them from `@/components/organisms/PaymentMintingStep`.
+// can still import them from `@/components/organisms/PaymentMintingStep`.
 export type { PaymentMintingProps, TransactionStatus };
 
 /**
  * Review-and-confirm step in the carbon credit purchase wizard.
- *
- * Renders the static "Review & Confirm Payment" header only. The actual
- * signing and submission flow lives in the parent wizard so it can own
- * the CTAs, balance gating, and navigation back to the confirmation
- * page. This component is intentionally presentational — it accepts
- * no props and exposes no hooks.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 export function PaymentMintingStep({
   error,
