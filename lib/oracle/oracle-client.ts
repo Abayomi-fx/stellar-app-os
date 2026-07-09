@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 import { hexToBytes } from '@noble/hashes/utils';
 import { ed25519 } from '@noble/curves/ed25519';
 import { invokeSurvivalVerification } from '@/lib/stellar/survival-verifier-client';
@@ -77,3 +79,4 @@ export async function submitNdviSurvival(
     transactionHash: txHash,
   };
 }
+>>>>>>> 982c64ba2f219ccef8caa51fd46f92faa951b468

@@ -64,6 +64,11 @@ pub enum HarvestaError {
     FarmerNotRegistered = 36,
     InvalidRegion = 37,
 
+    // ── KYC attestation (61) ─────────────────────────────────────────────────
+    /// Caller is not a registered verifier — attest_kyc / verify_kyc denied.
+    NotVerifier = 61,
+
+    // ── Species registry (62–64, 74-75) ───────────────────────────────────────
     // ── Dispute / arbiter (38–46) ─────────────────────────────────────────────
     DisputeAlreadyOpen = 38,
     NoOpenDispute = 39,
@@ -123,9 +128,12 @@ pub enum HarvestaError {
     GrowthRateMustBePositive = 68,
     MaturityYearsMustBePositive = 63,
     SpeciesNotFound = 64,
-    InvasiveSpecies = 69,
-    HighWaterUse = 70,
+    InvasiveSpecies = 74,
+    HighWaterUse = 75,
 
+    // ── Farmer registry hash integrity (73) ────────────────────────────────
+    /// SHA-256 of the supplied document pre-image does not match the stored hash.
+    HashMismatch = 73,
     // ── Farmer registry validator gates (67–68) ──────────────────────────────
     /// Caller is not a registered validator — gated read/write denied.
     NotValidator = 67,
