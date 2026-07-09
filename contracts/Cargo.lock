@@ -1135,6 +1135,7 @@ dependencies = [
 name = "planter-registry"
 version = "0.1.0"
 dependencies = [
+ "harvesta-errors",
  "admin-controls",
  "soroban-sdk 21.7.7",
 ]
@@ -1814,6 +1815,26 @@ dependencies = [
  "crate-git-revision",
  "darling 0.20.11",
  "itertools 0.11.0",
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "sha2",
+ "soroban-env-common 21.2.1",
+ "soroban-spec 21.7.7",
+ "soroban-spec-rust 21.7.7",
+ "stellar-xdr 21.2.0",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "soroban-sdk-macros"
+version = "22.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42b205cd86b34d530db87667bd287fbb194166d79b368227fd842110a914fde8"
+dependencies = [
+ "crate-git-revision",
+ "darling 0.20.11",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "rustc_version",

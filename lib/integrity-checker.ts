@@ -153,7 +153,7 @@ if (isMain) {
     try {
       const result = await runIntegrityCheck();
       const report = exportIntegrityReport(result);
-      console.info(report);
+      console.log(report);
       await sendAdminAlert(result);
       process.exit(0);
     } catch (error) {

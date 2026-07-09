@@ -64,6 +64,38 @@ pub enum HarvestaError {
     FarmerNotRegistered = 36,
     InvalidRegion = 37,
 
+    // ── Oracle / tree co-fund (26–34) ─────────────────────────────────────────
+    // UnauthorizedOracle = 26,
+    // NoOracleReport = 27,
+    // BatchEmpty = 28,
+    // BatchTooLarge = 29,
+    // TreeAlreadyRegistered = 30,
+    // TreeNotRegistered = 31,
+    // TreeNotOpenForContributions = 32,
+    // TreeNotOpenForRelease = 33,
+    // NoFundsToRelease = 34,
+
+    // ── Farmer registry (35–37) ───────────────────────────────────────────────
+    // FarmerAlreadyRegistered = 35,
+    // FarmerNotRegistered = 36,
+    // InvalidRegion = 37,
+
+    // ── Dispute / arbiter (38–46) ─────────────────────────────────────────────
+    // DisputeAlreadyOpen = 38,
+    // NoOpenDispute = 39,
+    // EscrowAlreadyFinalised = 40,
+    // NotArbiter = 41,
+    // NotBuyerOrSeller = 42,
+    // MilestoneReleaseBlocked = 43,
+    // MilestoneAlreadyProcessed = 44,
+    // CompletionPercentageOutOfRange = 45,
+    // TotalReleasedExceedsMilestone = 46,
+
+    // ── Nullifier registry (60) ───────────────────────────────────────────────
+    CommitmentAlreadyRegistered = 60,
+
+    // ── Species registry (62─64) ──────────────────────────────────────────────
+    // ── Species registry (62–64, 69-70) ──────────────────────────────────────────────
     // ── KYC attestation (61) ─────────────────────────────────────────────────
     /// Caller is not a registered verifier — attest_kyc / verify_kyc denied.
     NotVerifier = 61,
