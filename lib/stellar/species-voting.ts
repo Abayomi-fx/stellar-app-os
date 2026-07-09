@@ -5,6 +5,7 @@
  * species catalogue. Voting power is proportional to TREE token holdings.
  */
 
+import { TransactionBuilder, Operation, BASE_FEE, Contract } from '@stellar/stellar-sdk';
 import { TransactionBuilder, Operation, BASE_FEE } from '@stellar/stellar-sdk';
 import { TransactionBuilder, Operation, BASE_FEE, xdr, Address } from '@stellar/stellar-sdk';
 import {
@@ -129,6 +130,9 @@ export async function buildProposeSpeciesTransaction(
     networkPassphrase,
   })
     .addOperation(
+      new Contract(getSpeciesVotingContract(network)).call(
+        'propose_species'
+      )
       Operation.invokeHostFunction({
         func: {
           args: [
@@ -191,6 +195,9 @@ export async function buildVoteTransaction(
     networkPassphrase,
   })
     .addOperation(
+      new Contract(getSpeciesVotingContract(network)).call(
+        'vote'
+      )
       Operation.invokeHostFunction({
         func: {
           args: [],
@@ -264,6 +271,9 @@ export async function getProposal(
     networkPassphrase,
   })
     .addOperation(
+      new Contract(getSpeciesVotingContract(network)).call(
+        'execute_proposal'
+      )
       Operation.invokeHostFunction({
         func: {
           args: [],

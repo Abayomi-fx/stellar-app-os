@@ -1020,6 +1020,7 @@ dependencies = [
 
 [[package]]
 name = "nft-certificate"
+version = "0.1.0"
 version = "0.0.0"
 dependencies = [
  "contract-utils",
@@ -1124,6 +1125,9 @@ dependencies = [
 ]
 
 [[package]]
+name = "planter-registry"
+version = "0.1.0"
+dependencies = [
 name = "planter-blacklist"
 version = "0.1.0"
 dependencies = [
