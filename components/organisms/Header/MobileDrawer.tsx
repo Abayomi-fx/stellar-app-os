@@ -43,25 +43,25 @@ interface MobileDrawerProps {
 // ── Navigation links ───────────────────────────────────────────────────────
 
 const NAV_LINKS = [
-  { href: '/',            labelKey: 'nav.home',         icon: Home },
-  { href: '/projects',    labelKey: 'nav.projects',     icon: FolderOpen },
-  { href: '/marketplace', labelKey: 'nav.marketplace',  icon: ShoppingBag },
-  { href: '/transactions',labelKey: 'nav.transactions', icon: History },
-  { href: '/dashboard',   labelKey: 'nav.dashboard',    icon: LayoutDashboard },
+  { href: '/', labelKey: 'nav.home', icon: Home },
+  { href: '/projects', labelKey: 'nav.projects', icon: FolderOpen },
+  { href: '/marketplace', labelKey: 'nav.marketplace', icon: ShoppingBag },
+  { href: '/transactions', labelKey: 'nav.transactions', icon: History },
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
 ] as const;
 
 // ── Animation variants ─────────────────────────────────────────────────────
 
 /** Backdrop: cross-fade */
 const backdropVariants = {
-  hidden:  { opacity: 0 },
+  hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.25 } },
-  exit:    { opacity: 0, transition: { duration: 0.2 } },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
 };
 
 /** Drawer panel: spring slide from right */
 const drawerVariants = {
-  hidden:  { x: '100%' },
+  hidden: { x: '100%' },
   visible: {
     x: 0,
     transition: {
@@ -75,7 +75,7 @@ const drawerVariants = {
     x: '100%',
     transition: {
       type: 'tween' as const,
-      ease: 'easeIn',
+      ease: 'easeIn' as const,
       duration: 0.22,
     },
   },
@@ -83,13 +83,17 @@ const drawerVariants = {
 
 /** Nav items: stagger-fade in after the panel arrives */
 const navContainerVariants = {
-  hidden:  {},
+  hidden: {},
   visible: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
 };
 
 const navItemVariants = {
-  hidden:  { opacity: 0, x: 18 },
-  visible: { opacity: 1, x: 0, transition: { type: 'tween' as const, ease: 'easeOut', duration: 0.18 } },
+  hidden: { opacity: 0, x: 18 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { type: 'tween' as const, ease: 'easeOut' as const, duration: 0.18 },
+  },
 };
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -97,7 +101,7 @@ const navItemVariants = {
 export function MobileDrawer({ isOpen, onClose, onOpenWallet }: MobileDrawerProps): JSX.Element {
   const pathname = usePathname();
   const { wallet, disconnect } = useWalletContext();
-  const drawerRef    = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const { t } = useAppTranslation();
 
@@ -137,11 +141,17 @@ export function MobileDrawer({ isOpen, onClose, onOpenWallet }: MobileDrawerProp
       const focusable = getFocusable();
       if (!focusable.length) return;
       const first = focusable[0];
-      const last  = focusable[focusable.length - 1];
+      const last = focusable[focusable.length - 1];
       if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
       } else {
-        if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
 
@@ -155,7 +165,9 @@ export function MobileDrawer({ isOpen, onClose, onOpenWallet }: MobileDrawerProp
   // ── Escape key ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose();
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
@@ -163,7 +175,9 @@ export function MobileDrawer({ isOpen, onClose, onOpenWallet }: MobileDrawerProp
   // ── Body scroll lock ──────────────────────────────────────────────────────
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -239,7 +253,10 @@ export function MobileDrawer({ isOpen, onClose, onOpenWallet }: MobileDrawerProp
                       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                       <span>{t(labelKey)}</span>
                       {isActive && (
-                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-stellar-blue" aria-hidden="true" />
+                        <span
+                          className="ml-auto h-1.5 w-1.5 rounded-full bg-stellar-blue"
+                          aria-hidden="true"
+                        />
                       )}
                     </Link>
                   </motion.div>

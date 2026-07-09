@@ -23,6 +23,7 @@ version = "0.1.0"
 dependencies = [
  "contract-utils",
  "harvesta-errors",
+ "shared",
  "soroban-sdk 21.7.7",
 ]
 
@@ -285,7 +286,16 @@ dependencies = [
 name = "carbon-credits"
 version = "0.1.0"
 dependencies = [
- "soroban-sdk",
+ "soroban-sdk 21.7.7",
+]
+
+[[package]]
+name = "carbon-marketplace"
+version = "0.1.0"
+dependencies = [
+ "admin-controls",
+ "harvesta-errors",
+ "soroban-sdk 21.7.7",
 ]
 
 [[package]]
@@ -652,6 +662,7 @@ checksum = "2bfcf67fea2815c2fc3b90873fae90957be12ff417335dfadc7f52927feb03b2"
 name = "escrow"
 version = "0.1.0"
 dependencies = [
+ "admin-controls",
  "soroban-sdk 21.7.7",
 ]
 
@@ -674,6 +685,7 @@ checksum = "40404c3f5f511ec4da6fe866ddf6a717c309fdbb69fbbad7b0f3edab8f2e835f"
 name = "farmer-registry"
 version = "0.1.0"
 dependencies = [
+ "admin-controls",
  "harvesta-errors",
  "soroban-sdk 21.7.7",
 ]
@@ -1007,6 +1019,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nft-certificate"
+version = "0.0.0"
+dependencies = [
+ "contract-utils",
+ "harvesta-errors",
+ "soroban-sdk 21.7.7",
+]
+
+[[package]]
 name = "nullifier-registry"
 version = "0.1.0"
 dependencies = [
@@ -1103,10 +1124,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "planter-blacklist"
+version = "0.1.0"
+dependencies = [
+ "harvesta-errors",
+ "soroban-sdk 21.7.7",
+]
+
+[[package]]
 name = "planter-registry"
 version = "0.1.0"
 dependencies = [
  "harvesta-errors",
+ "admin-controls",
  "soroban-sdk 21.7.7",
 ]
 
@@ -1492,6 +1522,13 @@ checksum = "77fd7028345d415a4034cf8777cd4f8ab1851274233b45f84e3d955502d93874"
 dependencies = [
  "digest",
  "keccak",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 21.7.7",
 ]
 
 [[package]]
@@ -1930,6 +1967,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sponsor-receipt"
+version = "0.1.0"
+dependencies = [
+ "contract-utils",
+ "soroban-sdk 21.7.7",
+]
+
+[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2112,6 +2157,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-registry"
+version = "0.1.0"
+dependencies = [
+ "contract-utils",
+ "escrow",
+ "harvesta-errors",
+ "soroban-sdk 21.7.7",
+]
+
+[[package]]
 name = "tree-token"
 version = "0.1.0"
 dependencies = [
@@ -2143,6 +2198,14 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "verifier-staking"
+version = "0.1.0"
+dependencies = [
+ "harvesta-errors",
+ "soroban-sdk 21.7.7",
+]
 
 [[package]]
 name = "wait-timeout"
@@ -2369,6 +2432,13 @@ name = "zk-location-verifier"
 version = "0.1.0"
 dependencies = [
  "harvesta-errors",
+ "soroban-sdk 21.7.7",
+]
+
+[[package]]
+name = "zk-verifier"
+version = "0.1.0"
+dependencies = [
  "soroban-sdk 21.7.7",
 ]
 

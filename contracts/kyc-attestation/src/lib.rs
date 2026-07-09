@@ -8,9 +8,15 @@
 
 use harvesta_errors::HarvestaError;
 use soroban_sdk::{
-    contract, contractimpl, contracttype, panic_with_error, symbol_short, Address, Env, IntoVal,
-    Vec,
+    contract, contractimpl, contracttype, contracterror, panic_with_error, symbol_short, Address,
+    Env, IntoVal, Vec,
 };
+
+#[contracterror]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum KycError {
+    NotVerifier = 61,
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -88,7 +94,7 @@ impl KycAttestation {
             .get(&verifier_key(&env, &verifier))
             .unwrap_or(false);
         if !is_verifier {
-            panic_with_error!(&env, HarvestaError::NotVerifier);
+            panic_with_error!(&env, KycError::NotVerifier);
         }
 
         let attestation = Attestation {

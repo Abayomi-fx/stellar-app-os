@@ -6,6 +6,7 @@ import type { BuildDonationTransactionRequest } from '@/lib/types/donation-payme
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as BuildDonationTransactionRequest;
+    const { amount, walletPublicKey, network, idempotencyKey, treeCount = 1 } = body;
     const { amount, walletPublicKey, network, idempotencyKey, treeCount = 1, regionId } = body;
 
     if (!amount || amount <= 0) {
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
       walletPublicKey,
       network,
       idempotencyKey,
+      treeCount
       treeCount,
       regionId
     );

@@ -14,6 +14,7 @@ use soroban_sdk::{
     token, Address, BytesN, Env, IntoVal, String,
 };
 use harvesta_errors::HarvestaError;
+use admin_controls::AdminControlsClient;
 
 // ── Errors ────────────────────────────────────────────────────────────────────
 
@@ -236,6 +237,7 @@ impl PlanterRegistry {
         name_hash: BytesN<32>,
         region: String,
     ) -> PlanterRecord {
+        Self::assert_not_paused(&env);
         wallet.require_auth();
 
         if !Self::is_eligible(env.clone(), wallet.clone()) {
@@ -285,6 +287,7 @@ impl PlanterRegistry {
     ///
     /// Only callable by the contract admin (typically the escrow contract).
     pub fn increment_score(env: Env, wallet: Address) {
+        Self::assert_not_paused(&env);
         Self::require_admin(&env);
 
         let key = DataKey::Planter(wallet.clone());
@@ -308,6 +311,7 @@ impl PlanterRegistry {
     /// Only callable by the contract admin (typically the dispute-resolver).
     /// Score floor is 0 — will not underflow.
     pub fn slash_score(env: Env, wallet: Address) {
+        Self::assert_not_paused(&env);
         Self::require_admin(&env);
 
         let key = DataKey::Planter(wallet.clone());
@@ -341,6 +345,7 @@ impl PlanterRegistry {
         verif_passed: u32,
         verif_total: u32,
     ) {
+        Self::assert_not_paused(&env);
         Self::require_admin(&env);
 
         let key = Self::planter_key(&env, &wallet);
@@ -399,6 +404,19 @@ impl PlanterRegistry {
             .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
     }
 
+    fn admin_controls(env: &Env) -> Address {
+        env.storage()
+            .instance()
+            .get(&symbol_short!("ADMC"))
+            .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
+    }
+
+    fn assert_not_paused(env: &Env) {
+        let admin_controls_addr = Self::admin_controls(env);
+        let admin_controls_client = AdminControlsClient::new(env, &admin_controls_addr);
+        admin_controls_client.assert_not_paused();
+    }
+
     fn require_admin(env: &Env) {
         let (admin, _, _) = Self::config(env);
         admin.require_auth();
@@ -427,6 +445,13 @@ mod tests {
     fn setup_with_min(min_stake: i128) -> Ctx {
         let env = Env::default();
         env.mock_all_auths();
+
+        // Deploy admin-controls contract
+        let admin_controls_id = env.register_contract(None, admin_controls::AdminControls);
+        let admin_controls_client = admin_controls::AdminControlsClient::new(&env, &admin_controls_id);
+        let admin = Address::generate(&env);
+        let oracle = Address::generate(&env);
+        admin_controls_client.initialize(&admin, &oracle);
 
         let contract_id = env.register_contract(None, PlanterRegistry);
         let client = PlanterRegistryClient::new(&env, &contract_id);

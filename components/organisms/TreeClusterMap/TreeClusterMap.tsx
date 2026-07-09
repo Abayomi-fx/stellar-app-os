@@ -21,7 +21,7 @@ interface ClusterItem {
   lng: number;
   count: number;
   trees: Tree[];
-  speciesCounts: Record<TreeSpecies, number>;
+  speciesCounts: Partial<Record<TreeSpecies, number>>;
   region: string;
 }
 
@@ -49,6 +49,17 @@ function clusterTrees(trees: Tree[], zoom: number): ClusterItem[] {
         Moringa: 0,
         Eucalyptus: 0,
         Mangrove: 0,
+        Acacia: 0,
+        Neem: 0,
+        'African Mahogany': 0,
+        Baobab: 0,
+        'Bamboo (Moso)': 0,
+        'West African Cedar': 0,
+        'Caribbean Pine': 0,
+        Iroko: 0,
+        Shea: 0,
+        Cashew: 0,
+        'African Locust Bean': 0,
       };
       speciesCounts[tree.species] = 1;
 
@@ -93,9 +104,7 @@ function formatPopupDetails(cluster: ClusterItem) {
           </div>
         ))}
       </div>
-      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-        Region: {cluster.region}
-      </p>
+      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Region: {cluster.region}</p>
     </div>
   );
 }
@@ -158,7 +167,8 @@ export function TreeClusterMap(): JSX.Element {
               Verified Tree Clusters
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-              Explore verified tree plantings in an interactive clustered map with species overlays and coordinate popups.
+              Explore verified tree plantings in an interactive clustered map with species overlays
+              and coordinate popups.
             </p>
           </div>
           <div className="max-w-xs">
@@ -185,7 +195,10 @@ export function TreeClusterMap(): JSX.Element {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm dark:border-slate-800" style={{ minHeight: '520px' }}>
+      <div
+        className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm dark:border-slate-800"
+        style={{ minHeight: '520px' }}
+      >
         <MapContainer
           center={[6.5, 12.5]}
           zoom={zoom}
@@ -222,9 +235,7 @@ export function TreeClusterMap(): JSX.Element {
                     ? `${cluster.count} verified tree${cluster.count > 1 ? 's' : ''}`
                     : `${cluster.trees[0].species} · ${cluster.trees[0].region}`}
                 </Tooltip>
-                <Popup>
-                  {formatPopupDetails(cluster)}
-                </Popup>
+                <Popup>{formatPopupDetails(cluster)}</Popup>
               </CircleMarker>
             );
           })}

@@ -1,13 +1,5 @@
 /**
  * Unit tests for GET /api/impact/:sponsor — Issue #545
- *
- * Covers:
- *   • Stellar address validation
- *   • CO2 aggregation logic
- *   • Per-species breakdown shape and sorting
- *   • 30s cache hit on repeated calls
- *   • Zero-impact (empty) response for unknown sponsors
- *   • Totals consistency (sum of parts = whole)
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';

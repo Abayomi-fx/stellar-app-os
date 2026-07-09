@@ -108,6 +108,23 @@ fn voting_threshold_key() -> Symbol {
 
 fn voting_period_key() -> Symbol {
     symbol_short!("VOTE_PERIOD")
+    symbol_short!("TREE_TKN")
+}
+
+fn species_registry_key() -> Symbol {
+    symbol_short!("SPEC_REG")
+}
+
+fn proposal_count_key() -> Symbol {
+    symbol_short!("PROP_CNT")
+}
+
+fn voting_threshold_key() -> Symbol {
+    symbol_short!("VOTE_THR")
+}
+
+fn voting_period_key() -> Symbol {
+    symbol_short!("VOTE_PRD")
 }
 
 fn proposal_key(id: u64) -> (Symbol, u64) {
@@ -173,6 +190,7 @@ impl SpeciesVoting {
     /// `maturity_years` — years to biomass maturity
     pub fn propose_species(
         env: Env,
+        proposer: Address,
         slug: Symbol,
         name: String,
         co2_scaled: i128,
@@ -237,6 +255,8 @@ impl SpeciesVoting {
         Self::assert_not_paused(&env);
 
         let voter = env.invoker();
+    pub fn vote(env: Env, voter: Address, proposal_id: u64, vote_for: bool) {
+        Self::assert_not_paused(&env);
         voter.require_auth();
 
         let mut proposal: ProposalRecord = env
@@ -315,6 +335,7 @@ impl SpeciesVoting {
     ///
     /// `proposal_id` — proposal to execute
     pub fn execute_proposal(env: Env, proposal_id: u64) {
+    pub fn execute_proposal(env: Env, proposal_id: u64, total_supply: i128) {
         Self::assert_not_paused(&env);
 
         let mut proposal: ProposalRecord = env
@@ -327,28 +348,22 @@ impl SpeciesVoting {
             panic!("proposal has not passed");
         }
 
-        let tree_token: Address = env
-            .storage()
-            .instance()
-            .get(&tree_token_key())
-            .expect("not initialized");
-
+        let species_registry: Address = env
         let total_votes = proposal.votes_for + proposal.votes_against;
-        let total_supply = token::Client::new(&env, &tree_token).total_supply();
-        
+
         let quorum_bps: u32 = env
             .storage()
             .instance()
             .get(&symbol_short!("QUORUM"))
             .expect("not initialized");
 
-        let required_votes = (total_supply as i128) * (quorum_bps as i128) / 10000;
-        
+        let required_votes = total_supply * (quorum_bps as i128) / 10000;
+
         if total_votes < required_votes {
             panic!("quorum not reached");
         }
 
-        let species_registry: Address = env
+        let _species_registry: Address = env
             .storage()
             .instance()
             .get(&species_registry_key())
@@ -528,6 +543,15 @@ mod tests {
 
         assert_eq!(client.proposal_count(), 1);
         
+        let (env, admin, _, _, client) = setup();
+
+        let slug = Symbol::short("mahogany");
+        let name = String::from_str(&env, "Mahogany");
+
+        client.propose_species(&admin, &slug, &name, &2500_i128, &25_u32);
+
+        assert_eq!(client.proposal_count(), 1);
+
         let proposal = client.get_proposal(&0);
         assert_eq!(proposal.slug, slug);
         assert_eq!(proposal.name, name);
@@ -548,6 +572,9 @@ mod tests {
         client.propose_species(&slug, &name, &3000_i128, &30_u32);
 
         client.vote(&0, &true);
+        client.propose_species(&admin, &slug, &name, &3000_i128, &30_u32);
+
+        client.vote(&voter, &0, &true);
 
         let proposal = client.get_proposal(&0);
         assert_eq!(proposal.votes_for, 500_000);
@@ -568,6 +595,10 @@ mod tests {
 
         client.vote(&0, &true);
         client.vote(&0, &false);
+        client.propose_species(&admin, &slug, &name, &2000_i128, &15_u32);
+
+        client.vote(&voter, &0, &true);
+        client.vote(&voter, &0, &false);
     }
 
     #[test]
@@ -580,6 +611,14 @@ mod tests {
         client.propose_species(&slug, &name, &1800_i128, &20_u32);
 
         client.vote(&0, &true);
+        let (env, admin, _, _, client) = setup();
+
+        let voter = Address::generate(&env);
+        let slug = Symbol::short("cedar");
+        let name = String::from_str(&env, "Cedar");
+        client.propose_species(&admin, &slug, &name, &1800_i128, &20_u32);
+
+        client.vote(&voter, &0, &true);
     }
 
     #[test]
@@ -601,6 +640,10 @@ mod tests {
             voter1.require_auth();
             client.vote(&0, &true);
         });
+        client.propose_species(&admin, &slug, &name, &2800_i128, &25_u32);
+
+        // voter1 has 600k — below the 1M threshold, so proposal stays Active
+        client.vote(&voter1, &0, &true);
 
         let proposal = client.get_proposal(&0);
         assert!(matches!(proposal.status, ProposalStatus::Active));
@@ -611,7 +654,7 @@ mod tests {
         let (env, admin, tree_token, _, client) = setup();
 
         let voter = Address::generate(&env);
-        // Mint enough for threshold and quorum (quorum is 10% of total supply, which will be 2M)
+        // Mint 2M — total supply = 2M; quorum = 10% of 2M = 200K; votes_for = 2M >= 200K
         token::StellarAssetClient::new(&env, &tree_token).mint(&voter, &2_000_000);
 
         let slug = Symbol::short("birch");
@@ -623,34 +666,16 @@ mod tests {
         let proposal = client.get_proposal(&0);
         if matches!(proposal.status, ProposalStatus::Passed) {
             client.execute_proposal(&0);
+        client.propose_species(&admin, &slug, &name, &2200_i128, &20_u32);
+
+        client.vote(&voter, &0, &true);
+
+        let proposal = client.get_proposal(&0);
+        if matches!(proposal.status, ProposalStatus::Passed) {
+            client.execute_proposal(&0, &2_000_000_i128);
             let updated = client.get_proposal(&0);
             assert!(matches!(updated.status, ProposalStatus::Executed));
         }
-    }
-
-    #[test]
-    #[should_panic(expected = "quorum not reached")]
-    fn test_execute_proposal_fails_quorum() {
-        let (env, admin, tree_token, _, client) = setup();
-
-        let voter = Address::generate(&env);
-        let voter2 = Address::generate(&env);
-        
-        // Voter1 mints 1.5M (passes threshold of 1M)
-        token::StellarAssetClient::new(&env, &tree_token).mint(&voter, &1_500_000);
-        // Mint a lot more to voter2 so the total supply is large, making quorum fail (10% of 20M = 2M)
-        token::StellarAssetClient::new(&env, &tree_token).mint(&voter2, &18_500_000);
-
-        let slug = Symbol::short("birch");
-        let name = String::from_str(&env, "Birch");
-        client.propose_species(&slug, &name, &2200_i128, &20_u32);
-
-        client.vote(&0, &true);
-
-        let proposal = client.get_proposal(&0);
-        assert!(matches!(proposal.status, ProposalStatus::Passed));
-        
-        client.execute_proposal(&0);
     }
 
     #[test]
@@ -663,6 +688,40 @@ mod tests {
         client.propose_species(&slug, &name, &2400_i128, &22_u32);
 
         client.execute_proposal(&0);
+    #[should_panic(expected = "quorum not reached")]
+    fn test_execute_proposal_fails_quorum() {
+        let (env, admin, tree_token, _, client) = setup();
+
+        let voter = Address::generate(&env);
+        let voter2 = Address::generate(&env);
+
+        // voter1: 1.5M (crosses 1M threshold), voter2: 18.5M → total supply = 20M
+        // quorum = 10% of 20M = 2M; votes_for = 1.5M < 2M → quorum not reached
+        token::StellarAssetClient::new(&env, &tree_token).mint(&voter, &1_500_000);
+        token::StellarAssetClient::new(&env, &tree_token).mint(&voter2, &18_500_000);
+
+        let slug = Symbol::short("birch");
+        let name = String::from_str(&env, "Birch");
+        client.propose_species(&admin, &slug, &name, &2200_i128, &20_u32);
+
+        client.vote(&voter, &0, &true);
+
+        let proposal = client.get_proposal(&0);
+        assert!(matches!(proposal.status, ProposalStatus::Passed));
+
+        client.execute_proposal(&0, &20_000_000_i128);
+    }
+
+    #[test]
+    #[should_panic(expected = "proposal has not passed")]
+    fn test_execute_failed_proposal_rejected() {
+        let (env, admin, _, _, client) = setup();
+
+        let slug = Symbol::short("elm");
+        let name = String::from_str(&env, "Elm");
+        client.propose_species(&admin, &slug, &name, &2400_i128, &22_u32);
+
+        client.execute_proposal(&0, &1_000_000_i128);
     }
 
     #[test]

@@ -149,6 +149,7 @@ export async function buildDonationTransaction(
   sourcePublicKey: string,
   network: NetworkType,
   idempotencyKey: string,
+  treeCount = 1
   treeCount = 1,
   regionId?: string
 ): Promise<{ transactionXdr: string; networkPassphrase: string }> {
@@ -171,6 +172,16 @@ export async function buildDonationTransaction(
 
   const regionPlanterAddresses = getRegionPlanterAddresses(regionId);
 
+  const builder = new TransactionBuilder(sourceAccount, {
+    fee: baseFee,
+    networkPassphrase,
+  });
+
+  // Add two operations per tree: 70% planting + 30% buffer
+  for (let i = 0; i < treeCount; i++) {
+    const { planting, buffer } = calculateDonationAllocation(amount);
+    builder
+      .addOperation(
   // Add two operations per tree: 70% planting + 30% buffer
   for (let i = 0; i < treeCount; i++) {
     const { planting, buffer } = calculateDonationAllocation(amount);
@@ -181,9 +192,7 @@ export async function buildDonationTransaction(
 
       for (let j = 0; j < planterCount; j += 1) {
         const amountForPlanter =
-          j === 0
-            ? parseFloat((planting - baseShare * (planterCount - 1)).toFixed(7))
-            : baseShare;
+          j === 0 ? parseFloat((planting - baseShare * (planterCount - 1)).toFixed(7)) : baseShare;
 
         builder.addOperation(
           Operation.payment({
@@ -200,6 +209,14 @@ export async function buildDonationTransaction(
           asset: usdcAsset,
           amount: planting.toFixed(7),
         })
+      )
+      .addOperation(
+        Operation.payment({
+          destination: REPLANTING_BUFFER_ADDRESS,
+          asset: usdcAsset,
+          amount: buffer.toFixed(7),
+        })
+      );
       );
     }
 

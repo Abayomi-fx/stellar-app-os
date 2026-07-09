@@ -14,6 +14,7 @@ export async function processDonationPayment(
   wallet: WalletConnection,
   idempotencyKey: string,
   onStatusChange?: DonationStatusCallback,
+  treeCount = 1
   treeCount = 1,
   regionId?: string
 ): Promise<DonationPaymentResult> {

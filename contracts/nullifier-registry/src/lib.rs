@@ -2,9 +2,15 @@
 
 use harvesta_errors::HarvestaError;
 use soroban_sdk::{
-    contract, contractimpl, contracttype, panic_with_error, symbol_short, xdr::ToXdr, Address,
-    Bytes, BytesN, Env, String, Symbol, Vec,
+    contract, contractimpl, contracttype, contracterror, panic_with_error, symbol_short,
+    xdr::ToXdr, Address, Bytes, BytesN, Env, String, Symbol, Vec,
 };
+
+#[contracterror]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum NullifierError {
+    CommitmentAlreadyRegistered = 60,
+}
 
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
@@ -56,10 +62,10 @@ impl NullifierRegistry {
             let entry: NullifierEntry = env.storage().persistent().get(&commitment).unwrap();
             if let Some(exp) = entry.expires_at {
                 if env.ledger().timestamp() < exp {
-                    panic_with_error!(&env, HarvestaError::CommitmentAlreadyRegistered);
+                    panic_with_error!(&env, NullifierError::CommitmentAlreadyRegistered);
                 }
             } else {
-                panic_with_error!(&env, HarvestaError::CommitmentAlreadyRegistered);
+                panic_with_error!(&env, NullifierError::CommitmentAlreadyRegistered);
             }
         }
 
