@@ -28,7 +28,7 @@
 //! tree escrows in the tree-escrow contract using those funds.
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, token, Address, Env, Vec,
+    contract, contractimpl, contracttype, symbol_short, token, Address, Env, IntoVal, Vec,
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -224,31 +224,24 @@ impl SubscriptionSponsorship {
         rec.total_trees_sponsored += rec.trees_per_cycle;
 
         // Try to lock the next cycle's amount from the sponsor.
-        // If the transfer fails (insufficient balance), cancel the subscription
+        // If the sponsor has insufficient balance, cancel the subscription
         // gracefully rather than panicking.
-        let lock_next = || {
+        let sponsor_balance = token::Client::new(&env, &rec.token).balance(&rec.sponsor);
+        if sponsor_balance >= rec.amount_per_cycle {
             token::Client::new(&env, &rec.token).transfer(
                 &rec.sponsor,
                 &env.current_contract_address(),
                 &rec.amount_per_cycle,
             );
-        };
-
-        // `env.try()` catches panics from the closure and returns `Result<T, Error>`.
-        // Since `transfer()` returns `()`, the result is `Result<(), Error>`.
-        match env.try(lock_next) {
-            Ok(_) => {
-                rec.next_processing = now + rec.interval_seconds;
-                // Keep status as Active
-            }
-            Err(_) => {
-                // Sponsor doesn't have enough funds — cancel gracefully
-                rec.status = SubscriptionStatus::Cancelled;
-                env.events().publish(
-                    (symbol_short!("sub"), symbol_short!("cancel")),
-                    (subscription_id, rec.sponsor.clone(), symbol_short!("no_funds")),
-                );
-            }
+            rec.next_processing = now + rec.interval_seconds;
+            // Keep status as Active
+        } else {
+            // Sponsor doesn't have enough funds — cancel gracefully
+            rec.status = SubscriptionStatus::Cancelled;
+            env.events().publish(
+                (symbol_short!("sub"), symbol_short!("cancel")),
+                (subscription_id, rec.sponsor.clone(), symbol_short!("no_funds")),
+            );
         }
 
         env.storage().persistent().set(&key, &rec);
