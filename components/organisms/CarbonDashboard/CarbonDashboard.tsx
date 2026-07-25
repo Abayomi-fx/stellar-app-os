@@ -80,6 +80,8 @@ const rangeOptions: Array<{ value: CarbonRange; label: string }> = [
   { value: 'all', label: 'All Time' },
 ];
 
+const tabPanelId = 'carbon-dashboard-panel';
+
 const rangeData: Record<CarbonRange, CarbonDashboardStats> = {
   '7d': {
     totalTrees: 8,
@@ -242,8 +244,10 @@ export function CarbonDashboard() {
             {rangeOptions.map((option) => (
               <button
                 key={option.value}
+                id={`carbon-range-${option.value}-tab`}
                 type="button"
                 role="tab"
+                aria-controls={tabPanelId}
                 aria-selected={selectedRange === option.value}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-stellar-blue focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                   selectedRange === option.value
@@ -287,7 +291,14 @@ export function CarbonDashboard() {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div
+        role="tabpanel"
+        id={tabPanelId}
+        aria-labelledby={`carbon-range-${selectedRange}-tab`}
+        aria-live="polite"
+        aria-busy={isLoading}
+        className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
+      >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <StatCard
             label="Total Trees Sponsored"
