@@ -21,6 +21,8 @@ function getHorizonServer(): Horizon.Server {
 }
 
 /** Map a Stellar payment memo or status string to our TreeStatus enum */
+// Currently unused - keeping for future memo parsing implementation
+
 function toTreeStatus(raw?: string): TreeStatus {
   const statuses: TreeStatus[] = ['funded', 'planted', 'verified', 'completed', 'failed'];
   const lower = (raw ?? '').toLowerCase();
@@ -28,7 +30,9 @@ function toTreeStatus(raw?: string): TreeStatus {
 }
 
 /** Fetch recent TREE token operations from Horizon (best-effort, non-fatal). */
-async function fetchHorizonTreeOps(): Promise<Map<string, { status: TreeStatus; plantedAt?: string }>> {
+async function fetchHorizonTreeOps(): Promise<
+  Map<string, { status: TreeStatus; plantedAt?: string }>
+> {
   const result = new Map<string, { status: TreeStatus; plantedAt?: string }>();
   try {
     const server = getHorizonServer();
@@ -49,7 +53,8 @@ async function fetchHorizonTreeOps(): Promise<Map<string, { status: TreeStatus; 
 
       const treeId = `HRV-HORIZON-${payment.id.slice(-6)}`;
       result.set(treeId, {
-        status: toTreeStatus(payment.transaction_attr?.memo as string | undefined),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        status: toTreeStatus((payment as any).transaction_attr?.memo as string | undefined),
         plantedAt: payment.created_at,
       });
     }
@@ -151,5 +156,11 @@ function applyFilters(base: TreeListResult, opts: TreeListOptions): TreeListResu
   const safeOffset = Math.max(offset, 0);
   filtered = filtered.slice(safeOffset, safeOffset + safeLimit);
 
-  return { trees: filtered, totalCount, limit: safeLimit, offset: safeOffset, cachedAt: base.cachedAt };
+  return {
+    trees: filtered,
+    totalCount,
+    limit: safeLimit,
+    offset: safeOffset,
+    cachedAt: base.cachedAt,
+  };
 }

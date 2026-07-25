@@ -71,12 +71,7 @@ impl SpeciesRegistry {
     /// * `slug`          — short identifier, e.g. `Symbol::new(&env, "teak")`
     /// * `co2_scaled`    — kg CO₂ per year × 100  (positive integer)
     /// * `maturity_years`— years to biomass maturity
-    pub fn register_species(
-        env: Env,
-        slug: Symbol,
-        co2_scaled: i128,
-        maturity_years: u32,
-    ) {
+    pub fn register_species(env: Env, slug: Symbol, co2_scaled: i128, maturity_years: u32) {
         let admin: Address = env
             .storage()
             .instance()
@@ -98,9 +93,7 @@ impl SpeciesRegistry {
             updated_at: env.ledger().timestamp(),
         };
 
-        env.storage()
-            .persistent()
-            .set(&species_key(&slug), &record);
+        env.storage().persistent().set(&species_key(&slug), &record);
 
         env.events().publish(
             (symbol_short!("species"), symbol_short!("register")),
