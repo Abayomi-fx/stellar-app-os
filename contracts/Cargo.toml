@@ -30,6 +30,7 @@ members = [
     "carbon-marketplace",
     "tree-registry",
     "verifier-staking",
+    "species-catalog",
 ]
 resolver = "2"
 

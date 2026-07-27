@@ -13,7 +13,7 @@
 
 use soroban_sdk::contracterror;
 
-#[contracterror]
+#[contracterror(export = false)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum HarvestaError {
@@ -95,7 +95,6 @@ pub enum HarvestaError {
     CommitmentAlreadyRegistered = 60,
 
     // ── Species registry (62─64) ──────────────────────────────────────────────
-    // ── Species registry (62–64, 69-70) ──────────────────────────────────────────────
     // ── KYC attestation (61) ─────────────────────────────────────────────────
     /// Caller is not a registered verifier — attest_kyc / verify_kyc denied.
     NotVerifier = 61,
@@ -129,9 +128,7 @@ pub enum HarvestaError {
     /// The proposal has already been executed and its outcome finalized.
     ProposalAlreadyExecuted = 55,
 
-    // ── Location proof / KYC / ZK (61, 65–77) ────────────────────────────────
-    /// Caller is not a registered verifier.
-    NotVerifier = 61,
+    // ── Location proof / KYC / ZK (64, 65–77) ────────────────────────────────
     /// Region geohash is outside the approved Northern Nigeria boundary.
     OutsideNigeriaRegion = 65,
     /// A location-proof commitment with this hash is already registered.
@@ -157,21 +154,18 @@ pub enum HarvestaError {
 
     // ── Species registry (62–64, 68–70) ───────────────────────────────────────
     Co2MustBePositive = 62,
-    GrowthRateMustBePositive = 68,
+    GrowthRateMustBePositive = 78,
     MaturityYearsMustBePositive = 63,
     SpeciesNotFound = 64,
     InvasiveSpecies = 74,
-    HighWaterUse = 75,
+    HighWaterUse = 82,
 
     // ── Farmer registry hash integrity (73) ────────────────────────────────
     /// SHA-256 of the supplied document pre-image does not match the stored hash.
     HashMismatch = 73,
-    // ── Farmer registry validator gates (67–68) ──────────────────────────────
+    // ── Farmer registry validator gates (67) ──────────────────────────────
     /// Caller is not a registered validator — gated read/write denied.
-    NotValidator = 67,
-    /// The SHA-256 hash supplied by the caller does not match the one stored
-    /// on-chain for this farmer's identity document.
-    HashMismatch = 68,
+    NotValidator = 79,
 
     // ── Arithmetic overflows (80–81) ──────────────────────────────────────────
     TreeTokenMintOverflow = 80,
