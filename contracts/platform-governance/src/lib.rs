@@ -714,6 +714,16 @@ impl PlatformGovernance {
         );
     }
 
+    /// Implement Delegated Voting Power Transfer in Governance.
+    ///
+    /// Allows voters to delegate voting weight to proxy addresses in platform-governance.
+    ///
+    /// `voter` — the address delegating voting power (must sign)
+    /// `proxy` — target proxy address receiving delegated voting weight
+    pub fn delegate_voting_power(env: Env, voter: Address, proxy: Address) {
+        Self::delegate_to(env, voter, proxy);
+    }
+
     /// Retract an existing delegation, restoring direct voting rights to the caller.
     pub fn retract_delegation(env: Env, delegator: Address) {
         Self::assert_not_paused(&env);
@@ -1577,5 +1587,19 @@ mod tests {
 
         // 5 delegators × 1000 each = 5000
         assert_eq!(client.get_delegated_power(&delegate), 5000);
+    }
+
+    #[test]
+    fn test_delegate_voting_power_transfer() {
+        let (env, _, _, _, client) = setup();
+
+        let proxy = Address::generate(&env);
+        let voter = Address::generate(&env);
+
+        client.register_delegate(&proxy, &String::from_str(&env, "governance"));
+        client.delegate_voting_power(&voter, &proxy);
+
+        assert_eq!(client.get_delegation(&voter), Some(proxy.clone()));
+        assert_eq!(client.get_delegated_power(&proxy), 1000);
     }
 }

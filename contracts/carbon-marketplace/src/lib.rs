@@ -49,6 +49,7 @@ pub enum MarketplaceError {
     InvalidDecayRate = 111,
     InvalidDuration = 112,
     PriceMustBePositive = 113,
+    BelowMinimumTradeSize = 114,
 }
 
 #[contracttype]
@@ -140,7 +141,12 @@ enum DataKey {
     AuctionConfig,
     /// Royalty basis points (e.g. 500 = 5%)
     RoyaltyConfig,
+    /// Minimum trade size threshold
+    MinTradeSize,
 }
+
+/// Default minimum trade size: 1.0 metric ton CO2 (1,000,000 base units).
+pub const MIN_TRADE_SIZE: i128 = 1_000_000;
 
 // ── Contract ──────────────────────────────────────────────────────────────────
 
@@ -190,6 +196,29 @@ impl CarbonMarketplace {
         env.storage()
             .instance()
             .set(&DataKey::OracleConfig, &(max_staleness, fallback_price));
+    }
+
+    /// Returns the minimum trade size threshold in base units (default: 1_000_000 = 1.0 metric ton CO2).
+    pub fn get_min_trade_size(env: &Env) -> i128 {
+        env.storage()
+            .instance()
+            .get(&DataKey::MinTradeSize)
+            .unwrap_or(MIN_TRADE_SIZE)
+    }
+
+    /// Admin configures the minimum trade size threshold.
+    pub fn set_min_trade_size(env: Env, min_size: i128) {
+        Self::assert_not_paused(&env);
+        let (admin, _) = Self::config(&env);
+        admin.require_auth();
+
+        if min_size <= 0 {
+            panic_with_error!(&env, MarketplaceError::PriceMustBePositive);
+        }
+
+        env.storage()
+            .instance()
+            .set(&DataKey::MinTradeSize, &min_size);
     }
 
     /// Returns the current marketplace price for TREE tokens.
@@ -255,6 +284,10 @@ impl CarbonMarketplace {
 
         if amount <= 0 {
             panic_with_error!(&env, MarketplaceError::ListingAmountMustBePositive);
+        }
+
+        if amount < Self::get_min_trade_size(&env) {
+            panic_with_error!(&env, MarketplaceError::BelowMinimumTradeSize);
         }
 
         let resolved_price = Self::resolve_listing_price(&env, price_per_token);
@@ -483,6 +516,10 @@ impl CarbonMarketplace {
 
         if amount <= 0 {
             panic_with_error!(&env, MarketplaceError::ListingAmountMustBePositive);
+        }
+
+        if amount < Self::get_min_trade_size(&env) {
+            panic_with_error!(&env, MarketplaceError::BelowMinimumTradeSize);
         }
 
         let (starting_price, reserve_price, decay_rate, duration) = Self::auction_config(&env);
@@ -1310,6 +1347,14 @@ mod tests {
         ctx.env.ledger().set_timestamp(ctx.env.ledger().timestamp() + 100);
 
         assert_eq!(ctx.client.get_current_price(&id), 50); // Reserve price
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #114)")]
+    fn test_list_below_minimum_trade_size_rejected() {
+        let ctx = setup();
+        // MIN_TRADE_SIZE is 1_000_000; attempting to list 999_999 base units must panic with BelowMinimumTradeSize (#114)
+        ctx.client.list(&ctx.seller, &ctx.planter, &999_999, &10, &ctx.payment_token);
     }
 
     // ── Fuzz Tests (Proptest) ──────────────────────────────────────────────────
