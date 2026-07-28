@@ -1,23 +1,11 @@
 #![no_std]
 
-//! Shared error codes for all Harvesta / FarmCredit contracts.
-//!
-//! Import the crate, then call `panic_with_error!(env, HarvestaError::Variant)`
-//! instead of raw string panics. Error codes are stable `u32` values embedded in
-//! the Stellar XDR so off-chain tooling can parse them without string matching.
-//!
-//! The contract suite has grown a lot, so this crate keeps the shared codes
-//! that are still used across multiple contracts. Contracts with overlapping
-//! domains define their own local `#[contracterror]` enums for
-//! contract-specific codes.
-
 use soroban_sdk::contracterror;
 
 #[contracterror(export = false)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum HarvestaError {
-    // ── Common lifecycle (1–8) ─────────────────────────────────────────────────
     AlreadyInitialized = 1,
     NotInitialized = 2,
     Unauthorized = 3,
@@ -25,30 +13,17 @@ pub enum HarvestaError {
     AlreadyPaused = 5,
     NotPaused = 6,
     NoPendingAdmin = 7,
-    ContractMustBeTreeTokenAdmin = 8,
-
-    // ── Amount / value validation (9–15) ──────────────────────────────────────
     AmountMustBePositive = 9,
     TreeCountMustBePositive = 10,
-    VerifiedCountMustBePositive = 11,
-    VerifiedCountExceedsDonation = 12,
     InvalidPayoutAmount = 13,
-    BurnAmountMustBePositive = 14,
     SlotAmountMustBePositive = 15,
-
-    // ── Escrow state (16–25) ──────────────────────────────────────────────────
     EscrowAlreadyExists = 16,
     EscrowNotFound = 17,
-    PlantingAlreadyVerified = 18,
-    PlantingNotVerified = 19,
     RefundAfterPlanting = 20,
-    SurvivalThresholdOutOfRange = 21,
     SurvivalRateOutOfRange = 22,
     SurvivalRateBelowMinimum = 23,
     SurvivalPeriodNotElapsed = 24,
     NothingToRelease = 25,
-
-    // ── Oracle / tree co-fund (26–34) ─────────────────────────────────────────
     UnauthorizedOracle = 26,
     NoOracleReport = 27,
     BatchEmpty = 28,
@@ -105,13 +80,6 @@ pub enum HarvestaError {
     NoOpenDispute = 39,
     EscrowAlreadyFinalised = 40,
     NotArbiter = 41,
-    NotBuyerOrSeller = 42,
-    MilestoneReleaseBlocked = 43,
-    MilestoneAlreadyProcessed = 44,
-    CompletionPercentageOutOfRange = 45,
-    TotalReleasedExceedsMilestone = 46,
-
-    // ── Misc contract-specific shared codes (47) ──────────────────────────────
     InvalidRoyalty = 47,
 
     // ── Species Voting (50–55) ────────────────────────────────────────────────
@@ -174,34 +142,16 @@ pub enum HarvestaError {
     // ── Tree lifecycle state machine (#462) ───────────────────────────────────
     InvalidTreeStatusTransition = 90,
     PlantingTimeoutNotReached = 91,
-    NonceAlreadyUsed = 93,
-
-    // ── Public Seal policy (#124) ─────────────────────────────────────────────
-    /// Seal policy version already exists.
-    PolicyVersionAlreadyExists = 100,
-    /// Seal policy version not found.
     PolicyNotFound = 101,
-    /// Threshold exceeds signer count or is zero.
     InvalidThreshold = 102,
-    /// Signer set is empty or exceeds maximum bounded size.
     InvalidSignerSet = 103,
-    /// Signer already approved this request (idempotent guard).
     AlreadyApproved = 104,
-    /// Signer is not in the active policy's signer set.
     NotAPolicySigner = 105,
-    /// Seal request is not in Open state.
     RequestNotOpen = 106,
-    /// Seal request has expired.
     RequestExpired = 107,
-    /// Policy administration requires authorized caller.
     NotPolicyAdmin = 108,
-    /// Policy is superseded and can no longer be used.
     PolicySuperseded = 109,
-    /// Seal request already finalised — cannot be modified.
-    RequestAlreadyFinalised = 110,
-    /// Cancellation of a finalised request is not allowed.
     CannotCancelFinalised = 111,
-    /// Replacement policy must have a higher version number.
     InvalidReplacementVersion = 112,
 }
 
@@ -245,4 +195,3 @@ pub enum FarmerError {
     HashMismatch = 7,
     FarmerFrozen = 8,
 }
-
