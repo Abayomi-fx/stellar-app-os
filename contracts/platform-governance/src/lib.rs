@@ -42,6 +42,7 @@
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, Address,
+    Env, String, Symbol, Vec,
     Env, IntoVal, String, Symbol, Val, Vec,
 };
 
@@ -1108,6 +1109,177 @@ impl PlatformGovernance {
     /// Return the 30-day active voter participation rate as basis points (0–10000).
     pub fn participation_rate_bps(env: Env) -> u64 {
         Self::bump_instance(&env);
+        let now = env.ledger().timestamp();
+        Self::rotate_participation_buckets(&env, now);
+
+        let total_power = Self::sum_buckets(&env);
+        let staking_contract: Address = env
+            .storage()
+            .instance()
+            .get(&staking_contract_key())
+            .expect("not initialized");
+        let total_staked = Self::get_total_staked(&env, &staking_contract);
+
+        if total_staked <= 0 {
+            panic_with_error!(&env, GovernanceError::NoStakedTokens);
+        }
+
+        let rate = (total_power * BASIS_POINTS as i128) / total_staked;
+        if rate < 0 {
+            0
+        } else if rate > BASIS_POINTS as i128 {
+            BASIS_POINTS
+        } else {
+            rate as u64
+        }
+    }
+
+    /// Return the number of days used for the participation window.
+    pub fn participation_window_days(_env: Env) -> u32 {
+        PARTICIPATION_WINDOW_DAYS
+    }
+
+    // ── Dynamic quorum ─────────────────────────────────────────────────────────
+
+    /// Convert a ledger timestamp to the number of days since epoch.
+    fn day_index(timestamp: u64) -> u32 {
+        (timestamp / SECONDS_PER_DAY) as u32
+    }
+
+    /// Zero out daily buckets that have fallen outside the 30-day window and
+    /// advance the stored day pointer to the current day.
+    fn rotate_participation_buckets(env: &Env, now: u64) {
+        let current_day = Self::day_index(now);
+        let stored_day: u32 = env
+            .storage()
+            .instance()
+            .get(&participation_day_key())
+            .unwrap_or(0u32);
+
+        let mut buckets: Vec<i128> = env
+            .storage()
+            .instance()
+            .get(&participation_buckets_key())
+            .unwrap_or_else(|| Vec::new(env));
+
+        if buckets.is_empty() {
+            for _ in 0..PARTICIPATION_WINDOW_DAYS {
+                buckets.push_back(0i128);
+            }
+        }
+
+        if current_day != stored_day {
+            let diff = current_day - stored_day;
+            if diff >= PARTICIPATION_WINDOW_DAYS {
+                for i in 0..buckets.len() {
+                    buckets.set(i, 0i128);
+                }
+            } else {
+                for d in 1..=diff {
+                    let idx = ((stored_day + d) % PARTICIPATION_WINDOW_DAYS) as u32;
+                    buckets.set(idx, 0i128);
+                }
+            }
+            env.storage().instance().set(&participation_day_key(), &current_day);
+            env.storage()
+                .instance()
+                .set(&participation_buckets_key(), &buckets);
+        }
+    }
+
+    /// Add `power` to the current day's participation bucket.
+    fn record_participation(env: &Env, power: i128) {
+        if power <= 0 {
+            return;
+        }
+        let now = env.ledger().timestamp();
+        Self::rotate_participation_buckets(env, now);
+
+        let current_day = Self::day_index(now);
+        let mut buckets: Vec<i128> = env
+            .storage()
+            .instance()
+            .get(&participation_buckets_key())
+            .unwrap_or_else(|| Vec::new(env));
+
+        if buckets.is_empty() {
+            for _ in 0..PARTICIPATION_WINDOW_DAYS {
+                buckets.push_back(0i128);
+            }
+        }
+
+        let idx = (current_day % PARTICIPATION_WINDOW_DAYS) as u32;
+        let current = buckets.get(idx).unwrap_or(0i128);
+        buckets.set(idx, current + power);
+
+        env.storage()
+            .instance()
+            .set(&participation_buckets_key(), &buckets);
+    }
+
+    /// Sum all participation buckets in the 30-day window.
+    fn sum_buckets(env: &Env) -> i128 {
+        let buckets: Vec<i128> = env
+            .storage()
+            .instance()
+            .get(&participation_buckets_key())
+            .unwrap_or_else(|| Vec::new(env));
+        let mut total = 0i128;
+        for i in 0..buckets.len() {
+            total += buckets.get(i).unwrap_or(0i128);
+        }
+        total
+    }
+
+    /// Map a participation rate in basis points to a quorum percentage.
+    /// High participation reduces the quorum (down to MIN_DYNAMIC_QUORUM);
+    /// low participation raises it (up to MAX_DYNAMIC_QUORUM).
+    fn map_rate_to_quorum(rate_bps: u64) -> u64 {
+        let range = MAX_DYNAMIC_QUORUM - MIN_DYNAMIC_QUORUM;
+        let reduction = (rate_bps * range) / BASIS_POINTS;
+        MAX_DYNAMIC_QUORUM - reduction
+    }
+
+    /// Recalculate the proposal quorum requirement from the last 30 days of
+    /// active voter participation. Higher participation lowers the quorum
+    /// (min 5%), lower participation raises it (max 25%). Only the stored
+    /// admin may call this function.
+    ///
+    /// `admin` — contract admin address (must authorize)
+    pub fn adjust_quorum(env: Env, admin: Address) {
+        admin.require_auth();
+
+        let stored_admin: Address = env
+            .storage()
+            .instance()
+            .get(&admin_key())
+            .expect("not initialized");
+        if admin != stored_admin {
+            panic_with_error!(&env, GovernanceError::Unauthorized);
+        }
+
+        let rate_bps = Self::participation_rate_bps(env);
+        let new_quorum = Self::map_rate_to_quorum(rate_bps);
+
+        env.storage()
+            .instance()
+            .set(&quorum_percentage_key(), &new_quorum);
+
+        env.events().publish(
+            (symbol_short!("quorum"), symbol_short!("adjust")),
+            (rate_bps, new_quorum),
+        );
+    }
+
+    /// Return the total active voting power recorded in the rolling 30-day window.
+    pub fn participation_30d(env: Env) -> i128 {
+        let now = env.ledger().timestamp();
+        Self::rotate_participation_buckets(&env, now);
+        Self::sum_buckets(&env)
+    }
+
+    /// Return the 30-day active voter participation rate as basis points (0–10000).
+    pub fn participation_rate_bps(env: Env) -> u64 {
         let now = env.ledger().timestamp();
         Self::rotate_participation_buckets(&env, now);
 
