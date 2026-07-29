@@ -32,6 +32,8 @@
     "seed:species": "node scripts/seed-species.mjs",
     "db:backup": "node scripts/db-backup.mjs",
     "prepare": "husky",
+    "ticker": "tsx lib/ticker/worker.ts",
+    "ticker:simulate": "dotenvx run -e TICKER_SIMULATE_TRADES=true -- tsx lib/ticker/worker.ts"
     "indexer:cdc": "tsx lib/indexer/cdc-worker.ts"
   },
   "dependencies": {
@@ -83,6 +85,8 @@
     "tailwind-merge": "^3.5.0",
     "vite": "^8.1.5",
     "winston": "3.17.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -128,6 +132,9 @@
     "@vitejs/plugin-react": "^4.1.0",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "jsdom": "^22.0.0",
     "vitest": "^4.1.9"
   },
