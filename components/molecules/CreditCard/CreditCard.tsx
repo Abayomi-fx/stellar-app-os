@@ -1,7 +1,6 @@
 // components/molecules/CreditCard/CreditCard.tsx
 'use client';
 
-import { Button } from '@/components/atoms/Button';
 import { Badge } from '@/components/atoms/Badge';
 import { Text } from '@/components/atoms/Text';
 import { cn } from '@/lib/utils';

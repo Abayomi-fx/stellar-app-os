@@ -10,56 +10,53 @@
 function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
     .trim();
 }
 
 function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function renderInline(text: string): string {
   return (
     text
       // Bold + italic
-      .replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>")
+      .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
       // Bold
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/__(.*?)__/g, "<strong>$1</strong>")
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.*?)__/g, '<strong>$1</strong>')
       // Italic
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/_(.*?)_/g, "<em>$1</em>")
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/_(.*?)_/g, '<em>$1</em>')
       // Inline code
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
       // Links [text](url)
-      .replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        '<a href="$2" rel="noopener noreferrer">$1</a>'
-      )
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" rel="noopener noreferrer">$1</a>')
   );
 }
 
 type BlockToken =
-  | { type: "heading"; level: number; text: string }
-  | { type: "blockquote"; text: string }
-  | { type: "code"; lang: string; text: string }
-  | { type: "hr" }
-  | { type: "ul"; items: string[][] }
-  | { type: "ol"; items: string[][] }
-  | { type: "paragraph"; text: string }
-  | { type: "blank" };
+  | { type: 'heading'; level: number; text: string }
+  | { type: 'blockquote'; text: string }
+  | { type: 'code'; lang: string; text: string }
+  | { type: 'hr' }
+  | { type: 'ul'; items: string[][] }
+  | { type: 'ol'; items: string[][] }
+  | { type: 'paragraph'; text: string }
+  | { type: 'blank' };
 
 function tokenize(markdown: string): BlockToken[] {
   // Strip frontmatter
-  const stripped = markdown.replace(/^---[\s\S]*?---\n/, "");
-  const lines = stripped.split("\n");
+  const stripped = markdown.replace(/^---[\s\S]*?---\n/, '');
+  const lines = stripped.split('\n');
   const tokens: BlockToken[] = [];
   let i = 0;
 
@@ -67,15 +64,15 @@ function tokenize(markdown: string): BlockToken[] {
     const line = lines[i];
 
     // Blank line
-    if (line.trim() === "") {
-      tokens.push({ type: "blank" });
+    if (line.trim() === '') {
+      tokens.push({ type: 'blank' });
       i++;
       continue;
     }
 
     // Fenced code block
     if (/^```/.test(line)) {
-      const lang = line.replace(/^```/, "").trim();
+      const lang = line.replace(/^```/, '').trim();
       const codeLines: string[] = [];
       i++;
       while (i < lines.length && !/^```/.test(lines[i])) {
@@ -83,7 +80,7 @@ function tokenize(markdown: string): BlockToken[] {
         i++;
       }
       i++; // consume closing ```
-      tokens.push({ type: "code", lang, text: codeLines.join("\n") });
+      tokens.push({ type: 'code', lang, text: codeLines.join('\n') });
       continue;
     }
 
@@ -91,7 +88,7 @@ function tokenize(markdown: string): BlockToken[] {
     const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
     if (headingMatch) {
       tokens.push({
-        type: "heading",
+        type: 'heading',
         level: headingMatch[1].length,
         text: headingMatch[2].trim(),
       });
@@ -101,7 +98,7 @@ function tokenize(markdown: string): BlockToken[] {
 
     // Horizontal rule
     if (/^(---|\*\*\*|___)\s*$/.test(line.trim())) {
-      tokens.push({ type: "hr" });
+      tokens.push({ type: 'hr' });
       i++;
       continue;
     }
@@ -110,10 +107,10 @@ function tokenize(markdown: string): BlockToken[] {
     if (/^>/.test(line)) {
       const quoteLines: string[] = [];
       while (i < lines.length && /^>/.test(lines[i])) {
-        quoteLines.push(lines[i].replace(/^>\s?/, ""));
+        quoteLines.push(lines[i].replace(/^>\s?/, ''));
         i++;
       }
-      tokens.push({ type: "blockquote", text: quoteLines.join("\n") });
+      tokens.push({ type: 'blockquote', text: quoteLines.join('\n') });
       continue;
     }
 
@@ -121,7 +118,7 @@ function tokenize(markdown: string): BlockToken[] {
     if (/^[-*+]\s/.test(line)) {
       const items: string[][] = [];
       while (i < lines.length && /^[-*+]\s/.test(lines[i])) {
-        const itemText = [lines[i].replace(/^[-*+]\s/, "")];
+        const itemText = [lines[i].replace(/^[-*+]\s/, '')];
         i++;
         // Continuation lines (indented)
         while (i < lines.length && /^\s{2,}/.test(lines[i])) {
@@ -130,7 +127,7 @@ function tokenize(markdown: string): BlockToken[] {
         }
         items.push(itemText);
       }
-      tokens.push({ type: "ul", items });
+      tokens.push({ type: 'ul', items });
       continue;
     }
 
@@ -138,7 +135,7 @@ function tokenize(markdown: string): BlockToken[] {
     if (/^\d+\.\s/.test(line)) {
       const items: string[][] = [];
       while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
-        const itemText = [lines[i].replace(/^\d+\.\s/, "")];
+        const itemText = [lines[i].replace(/^\d+\.\s/, '')];
         i++;
         while (i < lines.length && /^\s{2,}/.test(lines[i])) {
           itemText.push(lines[i].trim());
@@ -146,7 +143,7 @@ function tokenize(markdown: string): BlockToken[] {
         }
         items.push(itemText);
       }
-      tokens.push({ type: "ol", items });
+      tokens.push({ type: 'ol', items });
       continue;
     }
 
@@ -154,7 +151,7 @@ function tokenize(markdown: string): BlockToken[] {
     const paraLines: string[] = [];
     while (
       i < lines.length &&
-      lines[i].trim() !== "" &&
+      lines[i].trim() !== '' &&
       !/^#{1,6}\s/.test(lines[i]) &&
       !/^[-*+]\s/.test(lines[i]) &&
       !/^\d+\.\s/.test(lines[i]) &&
@@ -166,7 +163,7 @@ function tokenize(markdown: string): BlockToken[] {
       i++;
     }
     if (paraLines.length > 0) {
-      tokens.push({ type: "paragraph", text: paraLines.join(" ") });
+      tokens.push({ type: 'paragraph', text: paraLines.join(' ') });
     }
   }
 
@@ -178,59 +175,55 @@ function renderTokens(tokens: BlockToken[]): string {
 
   for (const token of tokens) {
     switch (token.type) {
-      case "blank":
+      case 'blank':
         break;
 
-      case "heading": {
+      case 'heading': {
         const id = slugify(token.text);
         const tag = `h${token.level}`;
-        parts.push(
-          `<${tag} id="${id}">${renderInline(escapeHtml(token.text))}</${tag}>`
-        );
+        parts.push(`<${tag} id="${id}">${renderInline(escapeHtml(token.text))}</${tag}>`);
         break;
       }
 
-      case "paragraph":
+      case 'paragraph':
         parts.push(`<p>${renderInline(escapeHtml(token.text))}</p>`);
         break;
 
-      case "blockquote":
-        parts.push(
-          `<blockquote><p>${renderInline(escapeHtml(token.text))}</p></blockquote>`
-        );
+      case 'blockquote':
+        parts.push(`<blockquote><p>${renderInline(escapeHtml(token.text))}</p></blockquote>`);
         break;
 
-      case "code":
+      case 'code':
         parts.push(
-          `<pre><code class="language-${token.lang || "text"}">${escapeHtml(
+          `<pre><code class="language-${token.lang || 'text'}">${escapeHtml(
             token.text
           )}</code></pre>`
         );
         break;
 
-      case "hr":
-        parts.push("<hr />");
+      case 'hr':
+        parts.push('<hr />');
         break;
 
-      case "ul": {
+      case 'ul': {
         const listItems = token.items
-          .map((lines) => `<li>${renderInline(escapeHtml(lines.join(" ")))}</li>`)
-          .join("");
+          .map((lines) => `<li>${renderInline(escapeHtml(lines.join(' ')))}</li>`)
+          .join('');
         parts.push(`<ul>${listItems}</ul>`);
         break;
       }
 
-      case "ol": {
+      case 'ol': {
         const listItems = token.items
-          .map((lines) => `<li>${renderInline(escapeHtml(lines.join(" ")))}</li>`)
-          .join("");
+          .map((lines) => `<li>${renderInline(escapeHtml(lines.join(' ')))}</li>`)
+          .join('');
         parts.push(`<ol>${listItems}</ol>`);
         break;
       }
     }
   }
 
-  return parts.join("\n");
+  return parts.join('\n');
 }
 
 /**

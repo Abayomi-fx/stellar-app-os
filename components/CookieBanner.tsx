@@ -1,6 +1,6 @@
 'use client';
 
-import { JSX, useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import { PiCookieFill, PiCheckBold, PiXBold, PiGearBold } from 'react-icons/pi';
 import {
   useCookieConsent,
@@ -281,12 +281,7 @@ export function CookieBanner({
               aria-label="Close customize modal"
             >
               <span className="sr-only">Close</span>
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -330,7 +325,8 @@ export function CookieBanner({
                     Necessary Cookies
                   </label>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                    Required for core functionality, security, and legal compliance. Cannot be disabled.
+                    Required for core functionality, security, and legal compliance. Cannot be
+                    disabled.
                   </p>
                 </div>
               </div>

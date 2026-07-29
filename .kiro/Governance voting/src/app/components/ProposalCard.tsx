@@ -1,13 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import {
-  Calendar,
-  Clock,
-  TrendingUp,
-  ChevronDown,
-  ChevronUp,
-  Info,
-} from 'lucide-react';
+import { Calendar, Clock, TrendingUp, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import type { Proposal } from '../store/governanceStore';
 import { ProposalTimeline } from './ProposalTimeline';
@@ -18,23 +11,15 @@ interface ProposalCardProps {
   userHasVoted: boolean;
 }
 
-export function ProposalCard({
-  proposal,
-  onVoteClick,
-  userHasVoted,
-}: ProposalCardProps) {
+export function ProposalCard({ proposal, onVoteClick, userHasVoted }: ProposalCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const totalVotes =
-    proposal.forVotes + proposal.againstVotes + proposal.abstainVotes;
+  const totalVotes = proposal.forVotes + proposal.againstVotes + proposal.abstainVotes;
   const forPercentage = totalVotes > 0 ? (proposal.forVotes / totalVotes) * 100 : 0;
-  const againstPercentage =
-    totalVotes > 0 ? (proposal.againstVotes / totalVotes) * 100 : 0;
+  const againstPercentage = totalVotes > 0 ? (proposal.againstVotes / totalVotes) * 100 : 0;
   const quorumPercentage = (totalVotes / proposal.quorum) * 100;
 
-  const daysRemaining = Math.ceil(
-    (proposal.endTime - Date.now()) / (1000 * 60 * 60 * 24)
-  );
+  const daysRemaining = Math.ceil((proposal.endTime - Date.now()) / (1000 * 60 * 60 * 24));
 
   const isActive = proposal.status === 'Active';
 
@@ -56,19 +41,17 @@ export function ProposalCard({
                   proposal.status === 'Active'
                     ? 'bg-blue-100 text-blue-700'
                     : proposal.status === 'Succeeded'
-                    ? 'bg-green-100 text-green-700'
-                    : proposal.status === 'Executed'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-red-100 text-red-700'
+                      ? 'bg-green-100 text-green-700'
+                      : proposal.status === 'Executed'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-red-100 text-red-700'
                 }`}
               >
                 {proposal.status}
               </span>
               <span className="text-xs text-gray-500">{proposal.category}</span>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {proposal.title}
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{proposal.title}</h3>
           </div>
         </div>
 
@@ -77,9 +60,7 @@ export function ProposalCard({
           <div className="flex items-start gap-2">
             <Info className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-xs font-medium text-amber-800 mb-1">
-                Summary for Humans
-              </p>
+              <p className="text-xs font-medium text-amber-800 mb-1">Summary for Humans</p>
               <p className="text-sm text-amber-900">{proposal.humanSummary}</p>
             </div>
           </div>
@@ -181,13 +162,9 @@ export function ProposalCard({
                 transition={{ duration: 0.3 }}
               >
                 <div className="mb-4 pb-4 border-b border-gray-200">
-                  <p className="text-sm text-gray-700 mb-4">
-                    {proposal.description}
-                  </p>
+                  <p className="text-sm text-gray-700 mb-4">{proposal.description}</p>
                   <div className="mt-4">
-                    <p className="text-xs font-medium text-gray-700 mb-3">
-                      Proposal Lifecycle
-                    </p>
+                    <p className="text-xs font-medium text-gray-700 mb-3">Proposal Lifecycle</p>
                     <ProposalTimeline status={proposal.status} />
                   </div>
                 </div>
@@ -215,8 +192,8 @@ export function ProposalCard({
               {proposal.status === 'Executed'
                 ? 'This proposal has been executed'
                 : proposal.status === 'Succeeded'
-                ? 'This proposal succeeded and is pending execution'
-                : 'Voting has ended'}
+                  ? 'This proposal succeeded and is pending execution'
+                  : 'Voting has ended'}
             </p>
           </div>
         )}

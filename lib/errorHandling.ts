@@ -42,8 +42,7 @@ export function getErrorPresentation(error: Error): ErrorPresentation {
     return {
       type: 'network',
       title: 'Connection issue',
-      message:
-        'We could not reach the server. Check your internet connection and try again.',
+      message: 'We could not reach the server. Check your internet connection and try again.',
     };
   }
 

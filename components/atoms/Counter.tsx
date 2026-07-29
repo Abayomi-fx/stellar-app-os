@@ -94,12 +94,7 @@ export function Counter({
 
   return (
     <div ref={counterRef}>
-      <Text 
-        variant="h2" 
-        className={className} 
-        aria-live="polite" 
-        aria-atomic="true"
-      >
+      <Text variant="h2" className={className} aria-live="polite" aria-atomic="true">
         {prefix}
         {formatNumber(count)}
         {suffix}

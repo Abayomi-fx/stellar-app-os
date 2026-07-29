@@ -17,8 +17,8 @@ interface StripePaymentFormProps {
   donorName: string;
   idempotencyKey: string;
   onProcessing: () => void;
-  onSuccess: (_paymentIntentId: string) => void; // eslint-disable-line no-unused-vars
-  onError: (_message: string) => void; // eslint-disable-line no-unused-vars
+  onSuccess: (_paymentIntentId: string) => void;
+  onError: (_message: string) => void;
   disabled?: boolean;
 }
 
@@ -159,8 +159,8 @@ export function StripePaymentForm({
 interface StripeCheckoutFormProps {
   amount: number;
   onProcessing: () => void;
-  onSuccess: (_paymentIntentId: string) => void; // eslint-disable-line no-unused-vars
-  onError: (_message: string) => void; // eslint-disable-line no-unused-vars
+  onSuccess: (_paymentIntentId: string) => void;
+  onError: (_message: string) => void;
   disabled?: boolean;
 }
 

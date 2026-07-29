@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ResultHighlight } from '@/components/molecules/ResultHighlight';
 import { Pagination } from '@/components/molecules/Pagination';
@@ -156,7 +157,9 @@ function SearchResultsPageContent(): React.ReactNode {
                       </div>
 
                       {/* Arrow Icon */}
-                      <span className="text-xl text-stellar-blue shrink-0"><ArrowRight className="w-4 h-4" /></span>
+                      <span className="text-xl text-stellar-blue shrink-0">
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
                     </div>
                   </li>
                 ))}
@@ -209,18 +212,18 @@ function SearchResultsPageContent(): React.ReactNode {
                 >
                   📚 Documentation
                 </a>
-                <a
+                <Link
                   href="/blog"
                   className="px-4 py-2 rounded-lg bg-card border border-border text-foreground hover:border-stellar-blue transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stellar-blue"
                 >
                   📝 Blog
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/projects"
                   className="px-4 py-2 rounded-lg bg-card border border-border text-foreground hover:border-stellar-blue transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stellar-blue"
                 >
                   📦 Projects
-                </a>
+                </Link>
               </div>
             </div>
           </section>

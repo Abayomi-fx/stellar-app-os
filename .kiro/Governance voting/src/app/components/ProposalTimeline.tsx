@@ -20,18 +20,8 @@ export function ProposalTimeline({ status }: ProposalTimelineProps) {
     return [
       {
         label: 'Active',
-        status:
-          currentIndex >= 0
-            ? currentIndex === 0
-              ? 'active'
-              : 'completed'
-            : 'pending',
-        icon:
-          currentIndex > 0 ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Clock className="w-4 h-4" />
-          ),
+        status: currentIndex >= 0 ? (currentIndex === 0 ? 'active' : 'completed') : 'pending',
+        icon: currentIndex > 0 ? <Check className="w-4 h-4" /> : <Clock className="w-4 h-4" />,
       },
       {
         label: 'Succeeded',
@@ -39,16 +29,12 @@ export function ProposalTimeline({ status }: ProposalTimelineProps) {
           status === 'Defeated'
             ? 'pending'
             : currentIndex >= 1
-            ? currentIndex === 1
-              ? 'active'
-              : 'completed'
-            : 'pending',
+              ? currentIndex === 1
+                ? 'active'
+                : 'completed'
+              : 'pending',
         icon:
-          currentIndex > 1 ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <CheckCircle2 className="w-4 h-4" />
-          ),
+          currentIndex > 1 ? <Check className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />,
       },
       {
         label: 'Executed',
@@ -81,33 +67,14 @@ export function ProposalTimeline({ status }: ProposalTimelineProps) {
     return [
       {
         label: 'Active',
-        status:
-          currentIndex >= 0
-            ? currentIndex === 0
-              ? 'active'
-              : 'completed'
-            : 'pending',
-        icon:
-          currentIndex > 0 ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Clock className="w-4 h-4" />
-          ),
+        status: currentIndex >= 0 ? (currentIndex === 0 ? 'active' : 'completed') : 'pending',
+        icon: currentIndex > 0 ? <Check className="w-4 h-4" /> : <Clock className="w-4 h-4" />,
       },
       {
         label: 'Succeeded',
-        status:
-          currentIndex >= 1
-            ? currentIndex === 1
-              ? 'active'
-              : 'completed'
-            : 'pending',
+        status: currentIndex >= 1 ? (currentIndex === 1 ? 'active' : 'completed') : 'pending',
         icon:
-          currentIndex > 1 ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <CheckCircle2 className="w-4 h-4" />
-          ),
+          currentIndex > 1 ? <Check className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />,
       },
       {
         label: 'Executed',
@@ -133,8 +100,8 @@ export function ProposalTimeline({ status }: ProposalTimelineProps) {
                 step.status === 'completed'
                   ? 'bg-green-500 text-white'
                   : step.status === 'active'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 text-gray-400'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-400'
               }`}
             >
               {step.icon}
@@ -158,8 +125,8 @@ export function ProposalTimeline({ status }: ProposalTimelineProps) {
                 step.status === 'active'
                   ? 'text-gray-900 font-medium'
                   : step.status === 'completed'
-                  ? 'text-gray-600'
-                  : 'text-gray-400'
+                    ? 'text-gray-600'
+                    : 'text-gray-400'
               }`}
             >
               {step.label}

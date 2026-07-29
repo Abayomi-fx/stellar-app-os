@@ -45,9 +45,7 @@ export default function App() {
                 <Sprout className="w-6 h-6 text-white" />
               </motion.div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Climate-Resilient Governance
-                </h1>
+                <h1 className="text-2xl font-bold text-gray-900">Climate-Resilient Governance</h1>
                 <p className="text-sm text-gray-600">
                   Empowering farmers and investors to shape our future
                 </p>
@@ -58,9 +56,7 @@ export default function App() {
               disabled={isRefreshing}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              <RefreshCw
-                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
-              />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="text-sm">Refresh</span>
             </button>
           </div>
@@ -89,9 +85,7 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total Proposals</span>
-                  <span className="font-semibold text-gray-900">
-                    {proposals.length}
-                  </span>
+                  <span className="font-semibold text-gray-900">{proposals.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Active Proposals</span>
@@ -101,9 +95,7 @@ export default function App() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Your Votes</span>
-                  <span className="font-semibold text-purple-600">
-                    {userVotes.length}
-                  </span>
+                  <span className="font-semibold text-purple-600">{userVotes.length}</span>
                 </div>
               </div>
             </motion.div>
@@ -115,12 +107,10 @@ export default function App() {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-6"
             >
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Gasless Voting
-              </h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Gasless Voting</h3>
               <p className="text-sm text-gray-700">
-                All votes are submitted using EIP-712 signatures. No gas fees required.
-                Your vote is secured by cryptographic proof.
+                All votes are submitted using EIP-712 signatures. No gas fees required. Your vote is
+                secured by cryptographic proof.
               </p>
             </motion.div>
           </div>

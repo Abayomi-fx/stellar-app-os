@@ -12,19 +12,21 @@ import { WalletModal } from '@/components/organisms/WalletModal/WalletModal';
 import { useWalletModal } from '@/components/organisms/WalletModal/useWalletModal';
 import { useWalletContext } from '@/contexts/WalletContext';
 import { useAppTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
   { href: '/', label: 'nav.home' },
   { href: '/projects', label: 'nav.projects' },
   { href: '/marketplace', label: 'nav.marketplace' },
+  { href: '/transactions', label: 'nav.transactions' },
   { href: '/dashboard', label: 'nav.dashboard' },
 ] as const;
 
 export function Header(): JSX.Element {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const { resolvedTheme, toggle: toggleTheme } = useTheme();
 
   const pathname = usePathname();
   const { wallet, disconnect } = useWalletContext();
@@ -37,11 +39,6 @@ export function Header(): JSX.Element {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  // Theme toggle — applies .dark class to <html>
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
 
   const handleWalletAction = (): void => {
     if (wallet?.publicKey) {
@@ -109,11 +106,11 @@ export function Header(): JSX.Element {
           <div className="hidden md:flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              onClick={toggleTheme}
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stellar-blue"
             >
-              {theme === 'dark' ? (
+              {resolvedTheme === 'dark' ? (
                 <Sun className="h-4 w-4" aria-hidden="true" />
               ) : (
                 <Moon className="h-4 w-4" aria-hidden="true" />
@@ -126,15 +123,25 @@ export function Header(): JSX.Element {
               <div className="flex items-center gap-3 mr-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
                 <div className="flex flex-col items-end">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-stellar-blue uppercase tracking-wider">XLM</span>
+                    <span className="text-[10px] font-bold text-stellar-blue uppercase tracking-wider">
+                      XLM
+                    </span>
                     <span className="text-xs font-mono font-bold text-white">
-                      {parseFloat(wallet.balance.xlm).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {parseFloat(wallet.balance.xlm).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-stellar-cyan uppercase tracking-wider">USDC</span>
+                    <span className="text-[10px] font-bold text-stellar-cyan uppercase tracking-wider">
+                      USDC
+                    </span>
                     <span className="text-xs font-mono font-bold text-white">
-                      {parseFloat(wallet.balance.usdc).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {parseFloat(wallet.balance.usdc).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                 </div>
@@ -160,11 +167,11 @@ export function Header(): JSX.Element {
           <div className="flex md:hidden items-center gap-2">
             <button
               type="button"
-              onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              onClick={toggleTheme}
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stellar-blue"
             >
-              {theme === 'dark' ? (
+              {resolvedTheme === 'dark' ? (
                 <Sun className="h-4 w-4" aria-hidden="true" />
               ) : (
                 <Moon className="h-4 w-4" aria-hidden="true" />

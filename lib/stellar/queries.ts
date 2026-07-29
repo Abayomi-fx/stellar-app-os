@@ -41,14 +41,14 @@ export async function fetchLiveImpactMetrics(): Promise<ImpactMetricsData> {
           'USDC',
           usdcIssuer
         );
-        
+
         const bufferBalance = await fetchAccountAssetBalance(
           server,
           networkConfig.addresses.replantingBuffer,
           'USDC',
           usdcIssuer
         );
-        
+
         return plantingBalance + bufferBalance;
       } catch (e) {
         console.warn('Could not fetch donation balances, using fallback', e);
@@ -80,9 +80,7 @@ async function fetchAccountAssetBalance(
   try {
     const account = await server.loadAccount(address);
     const balance = account.balances.find(
-      (b) => 
-        (b as any).asset_code === assetCode && 
-        (b as any).asset_issuer === assetIssuer
+      (b) => (b as any).asset_code === assetCode && (b as any).asset_issuer === assetIssuer
     );
     return balance ? parseFloat(balance.balance) : 0;
   } catch (error) {

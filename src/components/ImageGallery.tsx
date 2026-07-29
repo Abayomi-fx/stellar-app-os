@@ -1,7 +1,7 @@
-"use client";
+'use client';
 import React, { useState, useCallback } from 'react';
 import { type GalleryImage } from '../types/gallery';
-import { Lightbox } from './Lightbox'; 
+import { Lightbox } from './Lightbox';
 
 interface ImageGalleryProps {
   images: GalleryImage[];
@@ -35,9 +35,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ images }) => {
             />
             {/* Hover overlay for a 'fine' look */}
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-               <span className="text-white font-semibold border-2 border-white px-4 py-2 rounded-full transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                 View Image
-               </span>
+              <span className="text-white font-semibold border-2 border-white px-4 py-2 rounded-full transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                View Image
+              </span>
             </div>
           </button>
         ))}

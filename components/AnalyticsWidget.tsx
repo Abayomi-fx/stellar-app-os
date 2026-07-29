@@ -1,6 +1,6 @@
 'use client';
 
-import { JSX, useEffect, useRef, useState, useCallback } from 'react';
+import { type JSX, useEffect, useRef, useState, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -117,17 +117,6 @@ const DEFAULT_COLORS: string[] = [
 ];
 
 /**
- * Format date for display
- */
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/**
  * Filter data by date range
  */
 function filterDataByDateRange(
@@ -145,10 +134,10 @@ function filterDataByDateRange(
 /**
  * Export chart as PNG image
  */
-async function exportChartAsPNG(
+function exportChartAsPNG(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   filename: string = 'chart.png'
-): Promise<void> {
+): void {
   if (!canvasRef.current) {
     console.warn('Canvas reference not available for export');
     return;
@@ -185,7 +174,8 @@ function CustomTooltip(props: TooltipProps<number, string>): JSX.Element | null 
       <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
       {payload.map((entry: { name: string; value: number; color?: string }, index: number) => (
         <p key={`${entry.name}-${index}`} style={{ color: entry.color }} className="text-sm">
-          {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+          {entry.name}:{' '}
+          {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
         </p>
       ))}
     </div>
@@ -211,7 +201,10 @@ function DateRangeSelector({
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-800 sm:flex-row sm:items-end">
       <div className="flex-1">
-        <label htmlFor="start-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label
+          htmlFor="start-date"
+          className="block text-sm font-medium text-slate-700 dark:text-slate-300"
+        >
           Start Date
         </label>
         <div className="relative mt-1">
@@ -228,7 +221,10 @@ function DateRangeSelector({
       </div>
 
       <div className="flex-1">
-        <label htmlFor="end-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label
+          htmlFor="end-date"
+          className="block text-sm font-medium text-slate-700 dark:text-slate-300"
+        >
           End Date
         </label>
         <div className="relative mt-1">
@@ -357,9 +353,7 @@ export function AnalyticsWidget({
   /**
    * Filter data by selected date range
    */
-  const filteredData = showDateRange
-    ? filterDataByDateRange(data, startDate, endDate)
-    : data;
+  const filteredData = showDateRange ? filterDataByDateRange(data, startDate, endDate) : data;
 
   /**
    * Handle export
@@ -419,23 +413,18 @@ export function AnalyticsWidget({
         aria-label={`${title} chart`}
         style={{ height: `${height}px` }}
       >
-        <canvas
-          ref={canvasRef}
-          style={{ display: 'none' }}
-          aria-hidden="true"
-        />
+        <canvas ref={canvasRef} style={{ display: 'none' }} aria-hidden="true" />
 
         {filteredData.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-slate-500 dark:text-slate-400">No data available for the selected period</p>
+            <p className="text-slate-500 dark:text-slate-400">
+              No data available for the selected period
+            </p>
           </div>
         ) : (
           <ResponsiveContainer width={responsive ? '100%' : undefined} height="100%">
             {chartType === 'line' && (
-              <LineChart
-                data={filteredData}
-                margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-              >
+              <LineChart data={filteredData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#64748b" />
                 <YAxis stroke="#64748b" />
@@ -456,22 +445,14 @@ export function AnalyticsWidget({
             )}
 
             {chartType === 'bar' && (
-              <BarChart
-                data={filteredData}
-                margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-              >
+              <BarChart data={filteredData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#64748b" />
                 <YAxis stroke="#64748b" />
                 <Tooltip content={<CustomTooltip />} />
                 {showLegend && <Legend />}
                 {dataKeys.map((key, index) => (
-                  <Bar
-                    key={key}
-                    dataKey={key}
-                    fill={chartColors[index]}
-                    isAnimationActive={true}
-                  />
+                  <Bar key={key} dataKey={key} fill={chartColors[index]} isAnimationActive={true} />
                 ))}
               </BarChart>
             )}

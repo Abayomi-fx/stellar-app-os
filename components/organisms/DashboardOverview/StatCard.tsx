@@ -3,7 +3,6 @@
 import { Card, CardContent } from '@/components/molecules/Card';
 import { Text } from '@/components/atoms/Text';
 import { cn } from '@/lib/utils';
-import { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
   label: string;
@@ -18,11 +17,14 @@ export function StatCard({ label, value, subValue, icon, positive }: StatCardPro
     <Card className="relative overflow-hidden group border-none shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-card/60 backdrop-blur-sm rounded-3xl">
       {/* Accent bar */}
       <div className="absolute top-0 left-0 w-full h-1 bg-stellar-blue/30 group-hover:bg-stellar-blue transition-colors duration-300" />
-      
+
       <CardContent className="p-8">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <Text variant="muted" className="text-xs font-bold uppercase tracking-widest opacity-70">
+            <Text
+              variant="muted"
+              className="text-xs font-bold uppercase tracking-widest opacity-70"
+            >
               {label}
             </Text>
             <div className="flex flex-col">
@@ -30,7 +32,13 @@ export function StatCard({ label, value, subValue, icon, positive }: StatCardPro
                 {value}
               </Text>
               {subValue && (
-                <Text variant="small" className={cn('text-xs font-bold leading-none', positive ? 'text-stellar-green' : 'text-muted-foreground/60')}>
+                <Text
+                  variant="small"
+                  className={cn(
+                    'text-xs font-bold leading-none',
+                    positive ? 'text-stellar-green' : 'text-muted-foreground/60'
+                  )}
+                >
                   {subValue}
                 </Text>
               )}

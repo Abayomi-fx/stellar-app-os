@@ -48,8 +48,8 @@ interface GovernanceStore {
 
 // Mock EIP-712 signature generation
 const generateEIP712Signature = async (
-  proposalId: string,
-  choice: VoteChoice
+  _proposalId: string,
+  _choice: VoteChoice
 ): Promise<string> => {
   // Simulate gasless vote signature
   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -103,8 +103,7 @@ export const useGovernanceStore = create<GovernanceStore>((set, get) => ({
       title: 'Extend Carbon Credit Rewards Program',
       description:
         'Extend the existing carbon credit rewards program for an additional 12 months with a budget increase of 15%.',
-      humanSummary:
-        'Keep paying farmers carbon credits for another year, with 15% more budget.',
+      humanSummary: 'Keep paying farmers carbon credits for another year, with 15% more budget.',
       status: 'Succeeded',
       category: 'Climate-Resilient Grant',
       startTime: Date.now() - 10 * 24 * 60 * 60 * 1000,
@@ -147,7 +146,7 @@ export const useGovernanceStore = create<GovernanceStore>((set, get) => ({
     participationRate: 68,
   },
   castVote: async (proposalId: string, choice: VoteChoice) => {
-    const { voterInfluence, userVotes } = get();
+    const { voterInfluence } = get();
 
     // Generate EIP-712 signature for gasless voting
     const signature = await generateEIP712Signature(proposalId, choice);
@@ -167,18 +166,11 @@ export const useGovernanceStore = create<GovernanceStore>((set, get) => ({
         p.id === proposalId
           ? {
               ...p,
-              forVotes:
-                choice === 'For'
-                  ? p.forVotes + vote.votingPower
-                  : p.forVotes,
+              forVotes: choice === 'For' ? p.forVotes + vote.votingPower : p.forVotes,
               againstVotes:
-                choice === 'Against'
-                  ? p.againstVotes + vote.votingPower
-                  : p.againstVotes,
+                choice === 'Against' ? p.againstVotes + vote.votingPower : p.againstVotes,
               abstainVotes:
-                choice === 'Abstain'
-                  ? p.abstainVotes + vote.votingPower
-                  : p.abstainVotes,
+                choice === 'Abstain' ? p.abstainVotes + vote.votingPower : p.abstainVotes,
             }
           : p
       ),

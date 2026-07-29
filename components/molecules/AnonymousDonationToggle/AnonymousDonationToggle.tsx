@@ -1,6 +1,6 @@
 /**
  * Anonymous Donation Toggle Component
- * 
+ *
  * Allows users to enable privacy-preserving donations with ZK proofs.
  * Displays information about how anonymous donations work.
  */
@@ -8,13 +8,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Shield, Info, Lock, Eye, EyeOff } from 'lucide-react';
+import { Shield, Info, Lock, EyeOff } from 'lucide-react';
 import { Text } from '@/components/atoms/Text';
-import { Button } from '@/components/atoms/Button';
 
 interface AnonymousDonationToggleProps {
   isAnonymous: boolean;
-  onToggle: (isAnonymous: boolean) => void; // eslint-disable-line no-unused-vars
+  onToggle: (isAnonymous: boolean) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -135,9 +134,7 @@ export function AnonymousDonationToggle({
 
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
             <p>
-              <strong className="text-gray-900 dark:text-gray-100">
-                Zero-Knowledge Proofs:
-              </strong>{' '}
+              <strong className="text-gray-900 dark:text-gray-100">Zero-Knowledge Proofs:</strong>{' '}
               Your browser generates a cryptographic proof that you have the funds to donate,
               without revealing your wallet address.
             </p>
@@ -150,8 +147,8 @@ export function AnonymousDonationToggle({
 
             <p>
               <strong className="text-gray-900 dark:text-gray-100">On-Chain Privacy:</strong> The
-              transaction is submitted to the blockchain with only the proof, not your identity.
-              The smart contract verifies the proof without learning who you are.
+              transaction is submitted to the blockchain with only the proof, not your identity. The
+              smart contract verifies the proof without learning who you are.
             </p>
 
             <p>
@@ -163,8 +160,8 @@ export function AnonymousDonationToggle({
 
           <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
             <Text variant="muted" className="text-xs">
-              <strong>Note:</strong> Anonymous donations may take a few extra seconds to process
-              due to proof generation. A small relayer fee (~$0.50) may apply.
+              <strong>Note:</strong> Anonymous donations may take a few extra seconds to process due
+              to proof generation. A small relayer fee (~$0.50) may apply.
             </Text>
           </div>
         </div>

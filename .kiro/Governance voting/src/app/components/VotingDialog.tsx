@@ -100,9 +100,7 @@ export function VotingDialog({
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <h4 className="font-medium text-gray-900 mb-2">{proposal.title}</h4>
                     <div className="mb-3">
-                      <p className="text-sm text-gray-600 mb-2">
-                        Summary for Humans:
-                      </p>
+                      <p className="text-sm text-gray-600 mb-2">Summary for Humans:</p>
                       <p className="text-sm text-gray-800 bg-white p-3 rounded border border-gray-200">
                         {proposal.humanSummary}
                       </p>
@@ -114,9 +112,7 @@ export function VotingDialog({
 
                   {/* Current Results */}
                   <div className="mb-6">
-                    <h5 className="text-sm font-medium text-gray-700 mb-3">
-                      Current Results
-                    </h5>
+                    <h5 className="text-sm font-medium text-gray-700 mb-3">Current Results</h5>
                     <div className="space-y-2">
                       <div>
                         <div className="flex items-center justify-between text-sm mb-1">
@@ -136,7 +132,8 @@ export function VotingDialog({
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-gray-600">Against</span>
                           <span className="font-medium text-gray-900">
-                            {proposal.againstVotes.toLocaleString()} ({againstPercentage.toFixed(1)}%)
+                            {proposal.againstVotes.toLocaleString()} ({againstPercentage.toFixed(1)}
+                            %)
                           </span>
                         </div>
                         <div className="w-full bg-gray-100 rounded-full h-2">
@@ -151,9 +148,7 @@ export function VotingDialog({
 
                   {/* Vote Choices */}
                   <div className="mb-6">
-                    <h5 className="text-sm font-medium text-gray-700 mb-3">
-                      Your Choice
-                    </h5>
+                    <h5 className="text-sm font-medium text-gray-700 mb-3">Your Choice</h5>
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => setSelectedChoice('For')}
@@ -197,9 +192,7 @@ export function VotingDialog({
                   {/* Voting Power Display */}
                   <div className="mb-6 p-3 bg-purple-50 rounded-lg border border-purple-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-purple-800">
-                        Your Voting Power
-                      </span>
+                      <span className="text-sm text-purple-800">Your Voting Power</span>
                       <span className="font-semibold text-purple-900">
                         {userVotingPower.toLocaleString()}
                       </span>
@@ -237,7 +230,8 @@ export function VotingDialog({
                   <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
                     <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-blue-800">
-                      This is a gasless vote using EIP-712 signatures. You won't pay any gas fees.
+                      This is a gasless vote using EIP-712 signatures. You won&apos;t pay any gas
+                      fees.
                     </p>
                   </div>
                 </motion.div>
@@ -257,11 +251,10 @@ export function VotingDialog({
                   >
                     <CheckCircle2 className="w-8 h-8 text-green-600" />
                   </motion.div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Vote Submitted!
-                  </h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Vote Submitted!</h3>
                   <p className="text-sm text-gray-600 text-center">
-                    Your {selectedChoice} vote has been recorded with {userVotingPower.toLocaleString()} voting power.
+                    Your {selectedChoice} vote has been recorded with{' '}
+                    {userVotingPower.toLocaleString()} voting power.
                   </p>
                 </motion.div>
               )}

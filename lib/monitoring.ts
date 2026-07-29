@@ -33,7 +33,9 @@ function sendToMonitoringService(payload: MonitoringPayload): void {
   }
 
   try {
-    window.dispatchEvent(new CustomEvent<MonitoringPayload>('app:monitoring:error', { detail: payload }));
+    window.dispatchEvent(
+      new CustomEvent<MonitoringPayload>('app:monitoring:error', { detail: payload })
+    );
 
     if (process.env.NODE_ENV === 'development') {
       console.error('[Monitoring] Captured boundary error', payload);

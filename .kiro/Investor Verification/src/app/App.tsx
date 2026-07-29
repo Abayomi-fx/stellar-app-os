@@ -3,7 +3,7 @@ import { SatelliteMap } from './components/SatelliteMap';
 import { TelemetryCard } from './components/TelemetryCard';
 import { VerificationBadge } from './components/VerificationBadge';
 import { Droplets, Thermometer, Bug, MapPin, TrendingUp } from 'lucide-react';
-import { LatLngExpression } from 'leaflet';
+import { type LatLngExpression } from 'leaflet';
 
 // Mock farm location (Iowa farmland)
 const FARM_CENTER: LatLngExpression = [42.0308, -93.6319];
@@ -14,51 +14,59 @@ const HEALTH_ZONES = [
     id: 'zone-1',
     label: 'North Field',
     ndvi: 0.75,
-    coordinates: [[
-      [42.0340, -93.6380],
-      [42.0340, -93.6300],
-      [42.0320, -93.6300],
-      [42.0320, -93.6380],
-    ]],
+    coordinates: [
+      [
+        [42.034, -93.638],
+        [42.034, -93.63],
+        [42.032, -93.63],
+        [42.032, -93.638],
+      ],
+    ],
   },
   {
     id: 'zone-2',
     label: 'Central Field',
     ndvi: 0.82,
-    coordinates: [[
-      [42.0320, -93.6380],
-      [42.0320, -93.6300],
-      [42.0300, -93.6300],
-      [42.0300, -93.6380],
-    ]],
+    coordinates: [
+      [
+        [42.032, -93.638],
+        [42.032, -93.63],
+        [42.03, -93.63],
+        [42.03, -93.638],
+      ],
+    ],
   },
   {
     id: 'zone-3',
     label: 'South Field',
     ndvi: 0.45,
-    coordinates: [[
-      [42.0300, -93.6380],
-      [42.0300, -93.6300],
-      [42.0280, -93.6300],
-      [42.0280, -93.6380],
-    ]],
+    coordinates: [
+      [
+        [42.03, -93.638],
+        [42.03, -93.63],
+        [42.028, -93.63],
+        [42.028, -93.638],
+      ],
+    ],
   },
   {
     id: 'zone-4',
     label: 'East Plot',
     ndvi: 0.25,
-    coordinates: [[
-      [42.0340, -93.6300],
-      [42.0340, -93.6250],
-      [42.0280, -93.6250],
-      [42.0280, -93.6300],
-    ]],
+    coordinates: [
+      [
+        [42.034, -93.63],
+        [42.034, -93.625],
+        [42.028, -93.625],
+        [42.028, -93.63],
+      ],
+    ],
   },
 ];
 
 // Generate mock historical data
 const generateTrendData = (baseValue: number, variance: number, points: number = 24) => {
-  return Array.from({ length: points }, (_, i) => ({
+  return Array.from({ length: points }, () => ({
     value: baseValue + (Math.random() - 0.5) * variance,
   }));
 };
@@ -94,26 +102,17 @@ function App() {
         soilMoisture: {
           ...prev.soilMoisture,
           value: Math.max(0, Math.min(100, prev.soilMoisture.value + (Math.random() - 0.5) * 2)),
-          trendData: [
-            ...prev.soilMoisture.trendData.slice(1),
-            { value: prev.soilMoisture.value },
-          ],
+          trendData: [...prev.soilMoisture.trendData.slice(1), { value: prev.soilMoisture.value }],
         },
         temperature: {
           ...prev.temperature,
           value: Math.max(10, Math.min(40, prev.temperature.value + (Math.random() - 0.5) * 0.5)),
-          trendData: [
-            ...prev.temperature.trendData.slice(1),
-            { value: prev.temperature.value },
-          ],
+          trendData: [...prev.temperature.trendData.slice(1), { value: prev.temperature.value }],
         },
         pestRisk: {
           ...prev.pestRisk,
           value: Math.max(0, Math.min(100, prev.pestRisk.value + (Math.random() - 0.5) * 3)),
-          trendData: [
-            ...prev.pestRisk.trendData.slice(1),
-            { value: prev.pestRisk.value },
-          ],
+          trendData: [...prev.pestRisk.trendData.slice(1), { value: prev.pestRisk.value }],
         },
       }));
     }, 3000); // Update every 3 seconds
@@ -128,8 +127,8 @@ function App() {
 
   const getCurrentTime = () => {
     const now = new Date();
-    return now.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
     });
@@ -155,9 +154,7 @@ function App() {
                 <MapPin className="w-8 h-8 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  Green Valley Organic Farm
-                </h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Green Valley Organic Farm</h1>
                 <p className="text-gray-600 mb-3">
                   Real-time farm verification and health monitoring powered by blockchain oracles
                 </p>
@@ -315,8 +312,8 @@ function App() {
                   </p>
                 </div>
                 <div className="pt-3 border-t border-blue-200">
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
                     onClick={(e) => e.preventDefault()}
                   >

@@ -86,7 +86,7 @@ export function applyFilters(projects: CarbonProject[], filters: ProjectFilters)
 
 export function extractUniqueValues<T extends string>(
   projects: CarbonProject[],
-  // eslint-disable-next-line no-unused-vars
+
   extractor: (project: CarbonProject) => T | T[]
 ): T[] {
   const values = new Set<T>();

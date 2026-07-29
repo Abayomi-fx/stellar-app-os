@@ -1,6 +1,6 @@
 'use client';
 
-import { JSX, useState } from 'react';
+import { type JSX, useState } from 'react';
 import { PiWarningBold, PiProhibitBold, PiXBold } from 'react-icons/pi';
 import type { RateLimitState } from '@/hooks/useRateLimit';
 

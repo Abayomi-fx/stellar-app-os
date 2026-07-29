@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Trees, 
-  ChevronRight, 
-  Check, 
-  Info, 
-  AlertCircle,
-  CreditCard,
-  Wallet
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/molecules/Card';
+import { ChevronRight, Check, Info, AlertCircle, CreditCard, Wallet } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from '@/components/molecules/Card';
 import { Button } from '@/components/atoms/Button';
 import { Text } from '@/components/atoms/Text';
 import { cn } from '@/lib/utils';
@@ -26,21 +25,30 @@ export function BulkPurchaseFlow() {
     { amount: 10000, label: 'Gold Restorer', discount: '20%' },
   ];
 
-  const handleNext = () => setStep(s => s + 1);
-  const handleBack = () => setStep(s => s - 1);
+  const handleNext = () => setStep((s) => s + 1);
+  const handleBack = () => setStep((s) => s - 1);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-center gap-4">
         {[1, 2, 3].map((s) => (
           <div key={s} className="flex items-center gap-2">
-            <div className={cn(
-              "h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors",
-              step >= s ? "bg-stellar-blue text-white" : "bg-white/10 text-white/40"
-            )}>
+            <div
+              className={cn(
+                'h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors',
+                step >= s ? 'bg-stellar-blue text-white' : 'bg-white/10 text-white/40'
+              )}
+            >
               {step > s ? <Check className="h-4 w-4" /> : s}
             </div>
-            {s < 3 && <div className={cn("h-0.5 w-12 transition-colors", step > s ? "bg-stellar-blue" : "bg-white/10")} />}
+            {s < 3 && (
+              <div
+                className={cn(
+                  'h-0.5 w-12 transition-colors',
+                  step > s ? 'bg-stellar-blue' : 'bg-white/10'
+                )}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -49,7 +57,9 @@ export function BulkPurchaseFlow() {
         <Card className="border-white/5 bg-stellar-navy/40">
           <CardHeader>
             <CardTitle>Select Quantity</CardTitle>
-            <CardDescription>Corporate accounts start at 1,000 trees for bulk pricing.</CardDescription>
+            <CardDescription>
+              Corporate accounts start at 1,000 trees for bulk pricing.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -58,17 +68,21 @@ export function BulkPurchaseFlow() {
                   key={tier.amount}
                   onClick={() => setQuantity(tier.amount)}
                   className={cn(
-                    "p-6 rounded-xl border transition-all text-left group",
-                    quantity === tier.amount 
-                      ? "border-stellar-blue bg-stellar-blue/10 ring-2 ring-stellar-blue/20" 
-                      : "border-white/5 bg-white/5 hover:border-white/20"
+                    'p-6 rounded-xl border transition-all text-left group',
+                    quantity === tier.amount
+                      ? 'border-stellar-blue bg-stellar-blue/10 ring-2 ring-stellar-blue/20'
+                      : 'border-white/5 bg-white/5 hover:border-white/20'
                   )}
                 >
                   <Text className="text-xs font-bold uppercase tracking-widest text-stellar-blue group-hover:text-stellar-cyan transition-colors">
                     {tier.label}
                   </Text>
-                  <Text className="text-2xl font-bold mt-1 text-white">{tier.amount.toLocaleString()} Trees</Text>
-                  <Text className="text-sm text-white/50 mt-2">{tier.discount} Volume Discount</Text>
+                  <Text className="text-2xl font-bold mt-1 text-white">
+                    {tier.amount.toLocaleString()} Trees
+                  </Text>
+                  <Text className="text-sm text-white/50 mt-2">
+                    {tier.discount} Volume Discount
+                  </Text>
                 </button>
               ))}
             </div>
@@ -99,7 +113,10 @@ export function BulkPurchaseFlow() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button onClick={handleNext} className="w-full bg-stellar-blue hover:bg-stellar-blue/90 font-bold">
+            <Button
+              onClick={handleNext}
+              className="w-full bg-stellar-blue hover:bg-stellar-blue/90 font-bold"
+            >
               Continue to Payment
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
@@ -117,8 +134,10 @@ export function BulkPurchaseFlow() {
             <button
               onClick={() => setPaymentMethod('stellar')}
               className={cn(
-                "w-full p-6 rounded-xl border transition-all text-left flex items-center gap-4",
-                paymentMethod === 'stellar' ? "border-stellar-blue bg-stellar-blue/10" : "border-white/5 bg-white/5"
+                'w-full p-6 rounded-xl border transition-all text-left flex items-center gap-4',
+                paymentMethod === 'stellar'
+                  ? 'border-stellar-blue bg-stellar-blue/10'
+                  : 'border-white/5 bg-white/5'
               )}
             >
               <div className="p-3 rounded-full bg-stellar-blue/20">
@@ -126,7 +145,9 @@ export function BulkPurchaseFlow() {
               </div>
               <div className="flex-1">
                 <Text className="font-bold text-white">Stellar Network (USDC)</Text>
-                <Text className="text-sm text-white/50">Instant settlement via Freighter or Albedo</Text>
+                <Text className="text-sm text-white/50">
+                  Instant settlement via Freighter or Albedo
+                </Text>
               </div>
               {paymentMethod === 'stellar' && <Check className="h-5 w-5 text-stellar-blue" />}
             </button>
@@ -134,8 +155,10 @@ export function BulkPurchaseFlow() {
             <button
               onClick={() => setPaymentMethod('wire')}
               className={cn(
-                "w-full p-6 rounded-xl border transition-all text-left flex items-center gap-4",
-                paymentMethod === 'wire' ? "border-stellar-purple bg-stellar-purple/10" : "border-white/5 bg-white/5"
+                'w-full p-6 rounded-xl border transition-all text-left flex items-center gap-4',
+                paymentMethod === 'wire'
+                  ? 'border-stellar-purple bg-stellar-purple/10'
+                  : 'border-white/5 bg-white/5'
               )}
             >
               <div className="p-3 rounded-full bg-stellar-purple/20">
@@ -143,14 +166,22 @@ export function BulkPurchaseFlow() {
               </div>
               <div className="flex-1">
                 <Text className="font-bold text-white">Corporate Wire Transfer</Text>
-                <Text className="text-sm text-white/50">Settlement in 1-3 business days (USD/EUR/GBP)</Text>
+                <Text className="text-sm text-white/50">
+                  Settlement in 1-3 business days (USD/EUR/GBP)
+                </Text>
               </div>
               {paymentMethod === 'wire' && <Check className="h-5 w-5 text-stellar-purple" />}
             </button>
           </CardContent>
           <CardFooter className="flex gap-3">
-            <Button variant="outline" onClick={handleBack} className="flex-1 border-white/10">Back</Button>
-            <Button onClick={handleNext} disabled={!paymentMethod} className="flex-[2] bg-stellar-blue hover:bg-stellar-blue/90 font-bold">
+            <Button variant="outline" onClick={handleBack} className="flex-1 border-white/10">
+              Back
+            </Button>
+            <Button
+              onClick={handleNext}
+              disabled={!paymentMethod}
+              className="flex-[2] bg-stellar-blue hover:bg-stellar-blue/90 font-bold"
+            >
               Review Order
             </Button>
           </CardFooter>
@@ -181,19 +212,24 @@ export function BulkPurchaseFlow() {
               <div className="h-px bg-white/10 my-2" />
               <div className="flex justify-between text-lg">
                 <span className="text-white font-bold">Total Amount:</span>
-                <span className="text-stellar-blue font-bold">${(quantity * 10 - 1500).toLocaleString()}</span>
+                <span className="text-stellar-blue font-bold">
+                  ${(quantity * 10 - 1500).toLocaleString()}
+                </span>
               </div>
             </div>
 
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex gap-3">
               <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
               <Text variant="small" className="text-yellow-200/80">
-                You will be redirected to complete the payment via {paymentMethod === 'stellar' ? 'Stellar' : 'secure wire portal'}.
+                You will be redirected to complete the payment via{' '}
+                {paymentMethod === 'stellar' ? 'Stellar' : 'secure wire portal'}.
               </Text>
             </div>
           </CardContent>
           <CardFooter className="flex gap-3">
-            <Button variant="outline" onClick={handleBack} className="flex-1 border-white/10">Back</Button>
+            <Button variant="outline" onClick={handleBack} className="flex-1 border-white/10">
+              Back
+            </Button>
             <Button className="flex-[2] bg-stellar-green hover:bg-stellar-green/90 font-bold text-stellar-navy">
               Confirm & Pay
             </Button>

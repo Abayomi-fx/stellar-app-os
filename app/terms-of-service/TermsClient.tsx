@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useRef } from "react";
-import { IoPrintOutline } from "react-icons/io5";
-import { useTableOfContents } from "@/hooks/Usetableofcontents ";
-import { TableOfContents } from "@/components/TableOfContents";
+import { useRef } from 'react';
+import { IoPrintOutline } from 'react-icons/io5';
+import { useTableOfContents } from '@/hooks/Usetableofcontents ';
+import { TableOfContents } from '@/components/TableOfContents';
 
 type TermsClientProps = {
   html: string;
@@ -39,7 +39,6 @@ export function TermsClient({ html, lastUpdated }: TermsClientProps) {
 
         {/* Layout */}
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col md:flex-row gap-8 items-start">
-
           {/* Sidebar TOC */}
           <aside
             aria-label="Page navigation"
@@ -68,13 +67,10 @@ export function TermsClient({ html, lastUpdated }: TermsClientProps) {
             className="min-w-0 flex-1 border-l border-gray-200 pl-8"
           >
             {/* prose styles are defined in globals.css under .tos-prose */}
-            <div
-              className="tos-prose"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            <div className="tos-prose" dangerouslySetInnerHTML={{ __html: html }} />
           </main>
         </div>
       </div>
     </>
   );
-}   
+}

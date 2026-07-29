@@ -1,23 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Building2, 
-  BarChart3, 
-  Download, 
-  Settings, 
-  TrendingUp, 
-  TreePine, 
+import {
+  Building2,
+  BarChart3,
+  Download,
+  Settings,
+  TrendingUp,
+  TreePine,
   Wind,
   PlusCircle,
-  FileText
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/Card';
 import { Button } from '@/components/atoms/Button';
 import { Text } from '@/components/atoms/Text';
-import { AnalyticsWidget } from '@/components/AnalyticsWidget';
 import { generateEsgReport } from '@/lib/corporate';
 import { cn } from '@/lib/utils';
+import { CarbonOffsetCalculator } from '@/components/organisms/CarbonOffsetCalculator';
 
 export function CorporateDashboard() {
   const [isExporting, setIsExporting] = useState(false);
@@ -29,7 +29,7 @@ export function CorporateDashboard() {
     { label: 'Next Milestone', value: '15k Trees', icon: TrendingUp, color: 'text-stellar-green' },
   ];
 
-  const handleExportEsg = async () => {
+  const handleExportEsg = () => {
     setIsExporting(true);
     try {
       generateEsgReport({
@@ -40,10 +40,10 @@ export function CorporateDashboard() {
           'Amazon Rainforest Restoration',
           'Kenya Mangrove Planting',
           'Indonesia Peatland Protection',
-          'European Mixed Forest Growth'
+          'European Mixed Forest Growth',
         ],
         period: 'Q1 2026',
-        reportId: 'ESG-2026-ACME-001'
+        reportId: 'ESG-2026-ACME-001',
       });
     } finally {
       setIsExporting(false);
@@ -58,11 +58,16 @@ export function CorporateDashboard() {
             Corporate Impact Dashboard
           </Text>
           <Text variant="muted" className="text-lg">
-            Manage your organization's environmental footprint and ESG compliance.
+            Manage your organization&apos;s environmental footprint and ESG compliance.
           </Text>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleExportEsg} disabled={isExporting} variant="outline" className="gap-2 border-white/10 hover:bg-white/5">
+          <Button
+            onClick={handleExportEsg}
+            disabled={isExporting}
+            variant="outline"
+            className="gap-2 border-white/10 hover:bg-white/5"
+          >
             <Download className="h-4 w-4" />
             Export ESG Report
           </Button>
@@ -83,7 +88,7 @@ export function CorporateDashboard() {
                   <p className="text-sm font-medium text-white/60">{stat.label}</p>
                   <p className="mt-1 text-2xl font-bold text-white">{stat.value}</p>
                 </div>
-                <div className={cn("rounded-full p-2 bg-white/5", stat.color)}>
+                <div className={cn('rounded-full p-2 bg-white/5', stat.color)}>
                   <stat.icon className="h-6 w-6" />
                 </div>
               </div>
@@ -91,6 +96,8 @@ export function CorporateDashboard() {
           </Card>
         ))}
       </div>
+
+      <CarbonOffsetCalculator />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Main Chart */}
@@ -120,7 +127,9 @@ export function CorporateDashboard() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-white/60 uppercase">Company Name</label>
-                <div className="p-3 rounded-lg bg-black/20 border border-white/5 text-white">Acme Corp</div>
+                <div className="p-3 rounded-lg bg-black/20 border border-white/5 text-white">
+                  Acme Corp
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-white/60 uppercase">Brand Color</label>
@@ -129,7 +138,9 @@ export function CorporateDashboard() {
                   <span className="text-sm text-white/80">#14B6E7</span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full text-xs py-2 border-white/10">Edit Brand Settings</Button>
+              <Button variant="outline" className="w-full text-xs py-2 border-white/10">
+                Edit Brand Settings
+              </Button>
             </CardContent>
           </Card>
 
@@ -144,10 +155,15 @@ export function CorporateDashboard() {
               {[
                 'Tax-Deductible Receipt Q1',
                 'Verification Audit #442',
-                'Project Impact Summary'
+                'Project Impact Summary',
               ].map((doc, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded hover:bg-white/5 cursor-pointer group">
-                  <span className="text-sm text-white/70 group-hover:text-white transition-colors">{doc}</span>
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-2 rounded hover:bg-white/5 cursor-pointer group"
+                >
+                  <span className="text-sm text-white/70 group-hover:text-white transition-colors">
+                    {doc}
+                  </span>
                   <Download className="h-4 w-4 text-white/20 group-hover:text-stellar-blue transition-colors" />
                 </div>
               ))}

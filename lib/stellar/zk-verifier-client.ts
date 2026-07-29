@@ -9,16 +9,7 @@
  * The donor's wallet address is never passed to the contract.
  */
 
-import {
-  Contract,
-  Networks,
-  SorobanRpc,
-  TransactionBuilder,
-  xdr,
-  nativeToScVal,
-  scValToNative,
-  Address,
-} from '@stellar/stellar-sdk';
+import { Contract, Networks, SorobanRpc, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
 import type { NetworkType } from '@/lib/types/wallet';
 import type { ZkProof, ProofInputs } from '@/lib/zk/types';
 
@@ -135,9 +126,7 @@ export async function invokeVerifyProof(
     fee: '1000000', // 0.1 XLM — Soroban ops are more expensive
     networkPassphrase,
   })
-    .addOperation(
-      contract.call('verify_proof', encodeProof(proof), encodeInputs(inputs))
-    )
+    .addOperation(contract.call('verify_proof', encodeProof(proof), encodeInputs(inputs)))
     .setTimeout(30)
     .build();
 

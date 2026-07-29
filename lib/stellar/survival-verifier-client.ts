@@ -113,7 +113,9 @@ async function invokeContract(
 
   const sendResult = await server.sendTransaction(preparedTx);
   if (sendResult.status === 'ERROR') {
-    throw new Error(`Transaction submission failed: ${sendResult.errorResult?.toXDR('base64') ?? 'unknown'}`);
+    throw new Error(
+      `Transaction submission failed: ${sendResult.errorResult?.toXDR('base64') ?? 'unknown'}`
+    );
   }
 
   await pollForConfirmation(server, sendResult.hash);

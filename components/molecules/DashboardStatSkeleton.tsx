@@ -1,6 +1,6 @@
-import React from "react";
-import { Skeleton, SkeletonText } from "@/components/atoms/Skeleton";
-import { Card, CardContent, CardHeader } from "@/components/molecules/Card";
+import React from 'react';
+import { Skeleton, SkeletonText } from '@/components/atoms/Skeleton';
+import { Card, CardContent, CardHeader } from '@/components/molecules/Card';
 
 interface DashboardStatSkeletonProps {
   className?: string;
@@ -8,7 +8,7 @@ interface DashboardStatSkeletonProps {
 }
 
 export function DashboardStatSkeleton({
-  className = "",
+  className = '',
   showChart = false,
 }: DashboardStatSkeletonProps): React.ReactNode {
   return (
@@ -64,7 +64,7 @@ interface DashboardStatGridSkeletonProps {
 
 export function DashboardStatGridSkeleton({
   count = 4,
-  className = "",
+  className = '',
 }: DashboardStatGridSkeletonProps): React.ReactNode {
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${className}`}>

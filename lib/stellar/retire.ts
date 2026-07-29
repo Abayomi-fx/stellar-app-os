@@ -1,4 +1,11 @@
-import { Asset, Horizon, Memo, Networks, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
+import {
+  Asset,
+  Horizon,
+  Memo,
+  Networks,
+  Operation,
+  TransactionBuilder,
+} from '@stellar/stellar-sdk';
 import type { NetworkType } from '@/lib/types/wallet';
 import type { RetirementSelection } from '@/lib/types/retire';
 
@@ -9,7 +16,9 @@ function getNetworkPassphrase(network: NetworkType): string {
 }
 
 function getHorizonUrl(network: NetworkType): string {
-  return network === 'mainnet' ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
+  return network === 'mainnet'
+    ? 'https://horizon.stellar.org'
+    : 'https://horizon-testnet.stellar.org';
 }
 
 function buildRetirementMemo(idempotencyKey: string): string {

@@ -25,8 +25,12 @@ export function PlatformImpact() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-          <Text variant="h3" className="text-2xl font-bold tracking-tight">Global Impact</Text>
-          <Text variant="muted" className="text-sm">Real-time platform-wide statistics from the Stellar network</Text>
+          <Text variant="h3" className="text-2xl font-bold tracking-tight">
+            Global Impact
+          </Text>
+          <Text variant="muted" className="text-sm">
+            Real-time platform-wide statistics from the Stellar network
+          </Text>
         </div>
         {lastUpdated && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
@@ -46,13 +50,18 @@ export function PlatformImpact() {
               </div>
             </div>
             <div className="space-y-1">
-              <Text variant="small" className="text-muted-foreground font-medium uppercase tracking-wider">Trees Planted</Text>
+              <Text
+                variant="small"
+                className="text-muted-foreground font-medium uppercase tracking-wider"
+              >
+                Trees Planted
+              </Text>
               {isLoading ? (
                 <Skeleton className="h-10 w-24" />
               ) : (
-                <Counter 
-                  end={metrics?.treesPlanted || 0} 
-                  className="text-4xl font-black text-stellar-green" 
+                <Counter
+                  end={metrics?.treesPlanted || 0}
+                  className="text-4xl font-black text-stellar-green"
                 />
               )}
             </div>
@@ -68,14 +77,19 @@ export function PlatformImpact() {
               </div>
             </div>
             <div className="space-y-1">
-              <Text variant="small" className="text-muted-foreground font-medium uppercase tracking-wider">Donations (USDC)</Text>
+              <Text
+                variant="small"
+                className="text-muted-foreground font-medium uppercase tracking-wider"
+              >
+                Donations (USDC)
+              </Text>
               {isLoading ? (
                 <Skeleton className="h-10 w-24" />
               ) : (
-                <Counter 
-                  end={Math.floor(metrics?.donationsReceived || 0)} 
+                <Counter
+                  end={Math.floor(metrics?.donationsReceived || 0)}
                   prefix="$"
-                  className="text-4xl font-black text-stellar-blue" 
+                  className="text-4xl font-black text-stellar-blue"
                 />
               )}
             </div>
@@ -91,13 +105,18 @@ export function PlatformImpact() {
               </div>
             </div>
             <div className="space-y-1">
-              <Text variant="small" className="text-muted-foreground font-medium uppercase tracking-wider">Active Escrows</Text>
+              <Text
+                variant="small"
+                className="text-muted-foreground font-medium uppercase tracking-wider"
+              >
+                Active Escrows
+              </Text>
               {isLoading ? (
                 <Skeleton className="h-10 w-24" />
               ) : (
-                <Counter 
-                  end={metrics?.activeEscrows || 0} 
-                  className="text-4xl font-black text-amber-600" 
+                <Counter
+                  end={metrics?.activeEscrows || 0}
+                  className="text-4xl font-black text-amber-600"
                 />
               )}
             </div>
@@ -107,7 +126,9 @@ export function PlatformImpact() {
 
       {isError && (
         <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 rounded-lg flex items-center justify-between">
-          <Text variant="small" className="text-red-600">Error: {error}</Text>
+          <Text variant="small" className="text-red-600">
+            Error: {error}
+          </Text>
           <button
             onClick={() => retry()}
             className="flex items-center gap-1.5 px-3 py-1 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700 transition-colors"

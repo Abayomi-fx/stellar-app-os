@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ExternalLink, Download, Loader2, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/atoms/Badge';
@@ -9,6 +9,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/molecules/Card';
 import { CertificateField } from '@/components/molecules/CertificateField';
 import { QrCode } from '@/components/atoms/QrCode';
+import { TiltCard } from '@/components/atoms/TiltCard';
 import {
   type CertificateData,
   generateCertificatePdf,
@@ -23,13 +24,12 @@ interface CertificatePreviewProps {
 
 function CertificatePreview({ data, className }: CertificatePreviewProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
-  const [qrError, setQrError] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [isAnonymous, setIsAnonymous] = useState<boolean>(data.isAnonymous || false);
 
   const explorerUrl = getExplorerUrl(data.transactionHash, data.explorerBaseUrl);
-  const currentData = { ...data, isAnonymous };
+  const currentData = useMemo(() => ({ ...data, isAnonymous }), [data, isAnonymous]);
   const displayName = getDisplayName(currentData);
 
   const formattedDate = data.retirementDate.toLocaleDateString('en-US', {
@@ -46,11 +46,10 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
 
   const handleQrGenerated = useCallback((dataUrl: string) => {
     setQrDataUrl(dataUrl);
-    setQrError(false);
   }, []);
 
   const handleQrError = useCallback(() => {
-    setQrError(true);
+    setDownloadError('Failed to generate QR code. Please try again.');
   }, []);
 
   const handleDownload = useCallback(async () => {
@@ -67,8 +66,9 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
   }, [qrDataUrl, currentData]);
 
   return (
+    <TiltCard className="mx-auto w-full max-w-2xl print:transform-none">
     <Card
-      className={cn('mx-auto w-full max-w-2xl overflow-hidden print:shadow-none', className)}
+      className={cn('w-full overflow-hidden print:shadow-none', className)}
       role="region"
       aria-label="Impact Certificate Preview"
     >
@@ -126,7 +126,7 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
           <Text variant="body" className="text-muted-foreground">
             has successfully contributed to
           </Text>
-          
+
           <div className="grid grid-cols-2 gap-4 w-full max-w-md my-2">
             <div className="rounded-lg bg-muted p-4 flex flex-col items-center">
               <Text
@@ -137,7 +137,9 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
               >
                 {data.treeCount.toLocaleString()}
               </Text>
-              <Text variant="small" className="text-muted-foreground">Trees Planted</Text>
+              <Text variant="small" className="text-muted-foreground">
+                Trees Planted
+              </Text>
             </div>
             <div className="rounded-lg bg-muted p-4 flex flex-col items-center">
               <Text
@@ -148,7 +150,9 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
               >
                 {data.co2Offset.toLocaleString()} t
               </Text>
-              <Text variant="small" className="text-muted-foreground">CO2 Offset</Text>
+              <Text variant="small" className="text-muted-foreground">
+                CO2 Offset
+              </Text>
             </div>
           </div>
 
@@ -164,7 +168,7 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
           >
             {data.projectName}
           </Text>
-          
+
           <div className="flex gap-4 text-sm mt-1">
             <Badge variant="outline" className="border-stellar-blue/30 text-stellar-blue">
               {data.region}
@@ -189,14 +193,17 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
             <CertificateField label="Transaction Hash" value={data.transactionHash} mono />
             <CertificateField label="Verification Date" value={formattedDate} />
             <div className="flex items-center gap-2 mt-2">
-              <input 
-                type="checkbox" 
-                id="anonymous-toggle" 
+              <input
+                type="checkbox"
+                id="anonymous-toggle"
                 checked={isAnonymous}
                 onChange={(e) => setIsAnonymous(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-stellar-blue focus:ring-stellar-blue"
               />
-              <label htmlFor="anonymous-toggle" className="text-sm text-muted-foreground cursor-pointer">
+              <label
+                htmlFor="anonymous-toggle"
+                className="text-sm text-muted-foreground cursor-pointer"
+              >
                 Anonymous Certificate
               </label>
             </div>
@@ -267,6 +274,7 @@ function CertificatePreview({ data, className }: CertificatePreviewProps) {
         </div>
       </CardFooter>
     </Card>
+    </TiltCard>
   );
 }
 

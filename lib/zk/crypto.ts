@@ -24,12 +24,12 @@ export function generateNonce(): string {
 export function stringToFieldElement(input: string): bigint {
   const hash = sha256(new TextEncoder().encode(input));
   const hashBigInt = BigInt('0x' + bytesToHex(hash));
-  
+
   // BN254 scalar field modulus (used in Groth16)
   const FIELD_MODULUS = BigInt(
     '21888242871839275222246405745257275088548364400416034343698204186575808495617'
   );
-  
+
   return hashBigInt % FIELD_MODULUS;
 }
 
@@ -74,11 +74,11 @@ export function generateAmountCommitment(amount: number, nonce: string): string 
 export function hexToFieldElement(hex: string): bigint {
   const bytes = hexToBytes(hex.startsWith('0x') ? hex.slice(2) : hex);
   const hashBigInt = BigInt('0x' + bytesToHex(bytes));
-  
+
   const FIELD_MODULUS = BigInt(
     '21888242871839275222246405745257275088548364400416034343698204186575808495617'
   );
-  
+
   return hashBigInt % FIELD_MODULUS;
 }
 
@@ -101,11 +101,11 @@ export function prepareCircuitInputs(
   const walletAddressField = stringToFieldElement(walletAddress).toString();
   const amountField = BigInt(Math.floor(amount * 1000000)).toString(); // Convert to micro-units
   const nonceField = hexToFieldElement(nonce).toString();
-  
+
   const donationCommitment = generateDonationCommitment(walletAddress, amount, nonce);
   const nullifier = generateNullifier(walletAddress, nonce);
   const amountCommitment = generateAmountCommitment(amount, nonce);
-  
+
   return {
     walletAddressField,
     amountField,

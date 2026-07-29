@@ -1,6 +1,6 @@
 import React from 'react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
-import { LucideIcon } from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
 
 interface TelemetryCardProps {
   title: string;
@@ -53,7 +53,9 @@ export const TelemetryCard: React.FC<TelemetryCardProps> = ({
   const styles = getStatusStyles(status);
 
   return (
-    <div className={`${styles.bg} ${styles.border} border rounded-xl p-5 transition-all hover:shadow-md`}>
+    <div
+      className={`${styles.bg} ${styles.border} border rounded-xl p-5 transition-all hover:shadow-md`}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg bg-white ${styles.icon}`}>

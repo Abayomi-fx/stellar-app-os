@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import { type Metadata } from 'next';
 import { DashboardOverview } from '@/components/organisms/DashboardOverview';
 
 export const metadata: Metadata = {

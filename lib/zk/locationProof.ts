@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import type { GpsCoordinates, LocationProof } from '@/lib/types/location';
+import type { EncryptedGpsPayload, GpsCoordinates, LocationProof } from '@/lib/types/location';
 
 /**
  * Circuit 2 — ZK Location Proof
@@ -115,9 +115,7 @@ export async function decryptGpsCoordinates(
  * Encrypt GPS coordinates using AES-256-GCM.
  * The server-side encryption key is read from the environment variable `GPS_ENCRYPTION_KEY`.
  */
-export async function encryptGpsCoordinates(
-  coords: GpsCoordinates
-): Promise<import('@/lib/types/location').EncryptedGpsPayload> {
+export async function encryptGpsCoordinates(coords: GpsCoordinates): Promise<EncryptedGpsPayload> {
   const keyHex = process.env.GPS_ENCRYPTION_KEY;
   if (!keyHex || keyHex.length !== 64) {
     throw new Error('GPS_ENCRYPTION_KEY env var must be a 64-char hex string (32 bytes)');

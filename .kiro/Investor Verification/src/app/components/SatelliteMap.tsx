@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import L, { LatLngExpression } from 'leaflet';
+import L, { type LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Layers } from 'lucide-react';
 
@@ -48,7 +48,7 @@ const getHealthColor = (ndvi: number): string => {
 };
 
 const getHealthOpacity = (ndvi: number): number => {
-  return 0.4 + (ndvi * 0.3);
+  return 0.4 + ndvi * 0.3;
 };
 
 export const SatelliteMap: React.FC<SatelliteMapProps> = ({ farmName, center, healthZones }) => {
@@ -64,7 +64,8 @@ export const SatelliteMap: React.FC<SatelliteMapProps> = ({ farmName, center, he
     const map = L.map(mapRef.current).setView(center, 15);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
 
     mapInstanceRef.current = map;

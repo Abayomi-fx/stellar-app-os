@@ -9,7 +9,7 @@ export default function AdminUsersPage(): ReactNode {
     <div className="container mx-auto max-w-7xl px-4 py-8 sm:py-10">
       <AdminUserTable
         users={mockAdminUsers}
-        onUserAction={async (userId, action, reason) => {
+        onUserAction={(userId, action, reason) => {
           // TODO: Replace with real API call
           console.info('User action:', { userId, action, reason });
           return Promise.resolve();

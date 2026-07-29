@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import React from "react";
-import { ProjectCardSkeleton } from "@/components/molecules/ProjectCard/ProjectCardSkeleton";
-import { TableSkeletonRows } from "@/components/molecules/TableRowSkeleton";
-import { DashboardStatGridSkeleton } from "@/components/molecules/DashboardStatSkeleton";
-import { SkeletonText } from "@/components/atoms/Skeleton";
+import React from 'react';
+import { ProjectCardSkeleton } from '@/components/molecules/ProjectCard/ProjectCardSkeleton';
+import { TableSkeletonRows } from '@/components/molecules/TableRowSkeleton';
+import { DashboardStatGridSkeleton } from '@/components/molecules/DashboardStatSkeleton';
+import { SkeletonText } from '@/components/atoms/Skeleton';
 
 /**
  * ProjectCardGridSkeleton
@@ -14,15 +14,13 @@ import { SkeletonText } from "@/components/atoms/Skeleton";
  */
 export function ProjectCardGridSkeleton({
   count = 6,
-  className = "",
+  className = '',
 }: {
   count?: number;
   className?: string;
 }): React.ReactNode {
   return (
-    <div
-      className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${className}`}
-    >
+    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${className}`}>
       {Array.from({ length: count }).map((_, i) => (
         <ProjectCardSkeleton key={i} />
       ))}
@@ -39,7 +37,7 @@ export function ProjectCardGridSkeleton({
 export function DataTableSkeleton({
   rows = 5,
   columns = 5,
-  className = "",
+  className = '',
   showHeader = true,
 }: {
   rows?: number;
@@ -73,11 +71,7 @@ export function DataTableSkeleton({
  * Shows hero section with image and text skeletons
  * Useful for: Page headers, Featured content
  */
-export function HeroSectionSkeleton({
-  className = "",
-}: {
-  className?: string;
-}): React.ReactNode {
+export function HeroSectionSkeleton({ className = '' }: { className?: string }): React.ReactNode {
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Image skeleton */}
@@ -100,8 +94,8 @@ export function HeroSectionSkeleton({
  */
 export function CardGridSkeleton({
   count = 4,
-  cols = "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
-  className = "",
+  cols = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+  className = '',
 }: {
   count?: number;
   cols?: string;
@@ -110,10 +104,7 @@ export function CardGridSkeleton({
   return (
     <div className={`grid ${cols} gap-4 ${className}`}>
       {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="p-4 bg-card rounded-lg border border-border space-y-3"
-        >
+        <div key={i} className="p-4 bg-card rounded-lg border border-border space-y-3">
           <div className="h-32 w-full bg-muted skeleton-shimmer rounded" />
           <SkeletonText lines={2} />
           <div className="h-10 w-full bg-muted skeleton-shimmer rounded" />
@@ -131,7 +122,7 @@ export function CardGridSkeleton({
  */
 export function ListSkeleton({
   count = 5,
-  className = "",
+  className = '',
 }: {
   count?: number;
   className?: string;
@@ -139,10 +130,7 @@ export function ListSkeleton({
   return (
     <div className={`space-y-3 ${className}`}>
       {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="p-4 bg-card rounded-lg border border-border space-y-2"
-        >
+        <div key={i} className="p-4 bg-card rounded-lg border border-border space-y-2">
           <div className="flex items-start justify-between">
             <SkeletonText lines={1} className="w-1/2" />
             <div className="h-4 w-20 bg-muted skeleton-shimmer rounded" />
@@ -160,11 +148,7 @@ export function ListSkeleton({
  * Shows full page content skeleton with header and body
  * Useful for: Article pages, Detail pages
  */
-export function ContentSkeleton({
-  className = "",
-}: {
-  className?: string;
-}): React.ReactNode {
+export function ContentSkeleton({ className = '' }: { className?: string }): React.ReactNode {
   return (
     <article className={`max-w-3xl mx-auto ${className}`}>
       {/* Header */}
@@ -195,11 +179,7 @@ export function ContentSkeleton({
  * Shows dashboard layout with stat cards and charts
  * Useful for: Dashboard pages
  */
-export function DashboardSkeleton({
-  className = "",
-}: {
-  className?: string;
-}): React.ReactNode {
+export function DashboardSkeleton({ className = '' }: { className?: string }): React.ReactNode {
   return (
     <div className={`space-y-8 ${className}`}>
       {/* Stats grid */}

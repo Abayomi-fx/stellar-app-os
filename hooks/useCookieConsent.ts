@@ -143,27 +143,33 @@ export function useCookieConsent() {
   /**
    * Set custom preferences
    */
-  const setPreferences = useCallback((preferences: CookieCategories): void => {
-    const customConsent: CookieConsentState = {
-      hasConsented: true,
-      preferences: {
-        necessary: true, // Always required
-        analytics: preferences.analytics,
-        marketing: preferences.marketing,
-        preferences: preferences.preferences,
-      },
-      consentTimestamp: Date.now(),
-    };
-    saveConsent(customConsent);
-  }, [saveConsent]);
+  const setPreferences = useCallback(
+    (preferences: CookieCategories): void => {
+      const customConsent: CookieConsentState = {
+        hasConsented: true,
+        preferences: {
+          necessary: true, // Always required
+          analytics: preferences.analytics,
+          marketing: preferences.marketing,
+          preferences: preferences.preferences,
+        },
+        consentTimestamp: Date.now(),
+      };
+      saveConsent(customConsent);
+    },
+    [saveConsent]
+  );
 
   /**
    * Check if a specific cookie category is allowed
    */
-  const isCategoryAllowed = useCallback((category: keyof CookieCategories): boolean => {
-    if (!consentState) return category === 'necessary';
-    return consentState.preferences[category];
-  }, [consentState]);
+  const isCategoryAllowed = useCallback(
+    (category: keyof CookieCategories): boolean => {
+      if (!consentState) return category === 'necessary';
+      return consentState.preferences[category];
+    },
+    [consentState]
+  );
 
   /**
    * Check if user has made a consent choice

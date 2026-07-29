@@ -1,13 +1,13 @@
 /**
  * Anonymous Payment Section Component
- * 
+ *
  * Handles the payment flow for privacy-preserving donations with ZK proofs.
  * Generates proof, builds transaction, and submits anonymously.
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Shield, Wallet, ArrowRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Text } from '@/components/atoms/Text';
@@ -30,6 +30,9 @@ export function AnonymousPaymentSection({
 }: AnonymousPaymentSectionProps) {
   const {
     status,
+    proverStep,
+    proverProgress,
+    proverMessage,
     proof,
     transactionHash,
     error,
@@ -43,19 +46,19 @@ export function AnonymousPaymentSection({
   const [hasGeneratedProof, setHasGeneratedProof] = useState(false);
   const costEstimate = estimateCost(amount);
 
+  const handleGenerateProof = useCallback(async () => {
+    if (!wallet?.publicKey) return;
+
+    setHasGeneratedProof(true);
+    await generateProof(wallet.publicKey, amount);
+  }, [amount, generateProof, wallet?.publicKey]);
+
   // Auto-generate proof when wallet is connected
   useEffect(() => {
     if (wallet?.publicKey && !hasGeneratedProof && status === 'idle') {
       handleGenerateProof();
     }
-  }, [wallet?.publicKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleGenerateProof = async () => {
-    if (!wallet?.publicKey) return;
-
-    setHasGeneratedProof(true);
-    await generateProof(wallet.publicKey, amount);
-  };
+  }, [handleGenerateProof, hasGeneratedProof, status, wallet?.publicKey]);
 
   const handleSubmit = async () => {
     if (!wallet?.publicKey || !proof) return;
@@ -141,6 +144,9 @@ export function AnonymousPaymentSection({
       {wallet && (
         <ZKProofGenerator
           status={status}
+          proverStep={proverStep}
+          proverProgress={proverProgress}
+          proverMessage={proverMessage}
           proofGenerationTime={proofGenerationTime}
           error={error}
         />
@@ -151,9 +157,7 @@ export function AnonymousPaymentSection({
         <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <div>
-            <Text className="font-semibold text-red-700 dark:text-red-300 mb-1">
-              Error
-            </Text>
+            <Text className="font-semibold text-red-700 dark:text-red-300 mb-1">Error</Text>
             <Text className="text-sm text-red-600 dark:text-red-400">{error}</Text>
           </div>
         </div>

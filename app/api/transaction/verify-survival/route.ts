@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { invokeSurvivalVerification } from '@/lib/stellar/survival-verifier-client';
-import type { SurvivalVerificationRequest, SurvivalVerificationResponse } from '@/lib/types/survival';
+import type {
+  SurvivalVerificationRequest,
+  SurvivalVerificationResponse,
+} from '@/lib/types/survival';
 
 export async function POST(request: Request) {
   let body: SurvivalVerificationRequest;
@@ -55,7 +58,10 @@ export async function POST(request: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Contract invocation failed';
 
-    if (msg.includes('planting not yet verified') || msg.includes('first milestone not yet verified')) {
+    if (
+      msg.includes('planting not yet verified') ||
+      msg.includes('first milestone not yet verified')
+    ) {
       return NextResponse.json({ error: 'PLANTING_NOT_VERIFIED' }, { status: 409 });
     }
     if (msg.includes('6-month survival period not yet elapsed')) {

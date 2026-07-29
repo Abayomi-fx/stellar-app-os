@@ -6,12 +6,11 @@ import { Button } from '@/components/atoms/Button';
 import { Text } from '@/components/atoms/Text';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/Card';
 import { useWalletContext } from '@/contexts/WalletContext';
-import { cn } from '@/lib/utils';
 
 interface WalletSigningStepProps {
   transactionXdr: string;
   networkPassphrase: string;
-  // eslint-disable-next-line no-unused-vars
+
   onSuccess: (signedXdr: string) => void;
   onCancel: () => void;
   title?: string;
@@ -57,7 +56,9 @@ export function WalletSigningStep({
           <CheckCircle2 className="h-16 w-16 text-stellar-green" />
         </div>
         <div className="text-center">
-          <Text variant="h3" className="font-bold text-white mb-2">Transaction Signed</Text>
+          <Text variant="h3" className="font-bold text-white mb-2">
+            Transaction Signed
+          </Text>
           <Text variant="muted">The transaction has been successfully signed.</Text>
         </div>
       </div>
@@ -88,21 +89,30 @@ export function WalletSigningStep({
               <ShieldCheck className="h-6 w-6 text-stellar-blue" />
             </div>
             <div className="space-y-1">
-              <Text variant="small" className="font-semibold text-white">Wallet Connection</Text>
+              <Text variant="small" className="font-semibold text-white">
+                Wallet Connection
+              </Text>
               <Text variant="muted" className="text-xs">
-                Connected via {wallet?.type}: {wallet?.publicKey.slice(0, 8)}...{wallet?.publicKey.slice(-8)}
+                Connected via {wallet?.type}: {wallet?.publicKey.slice(0, 8)}...
+                {wallet?.publicKey.slice(-8)}
               </Text>
             </div>
           </div>
 
           <div className="rounded-lg bg-black/30 p-4 border border-white/5">
-            <Text variant="small" className="text-white/50 font-mono text-[10px] break-all line-clamp-3">
+            <Text
+              variant="small"
+              className="text-white/50 font-mono text-[10px] break-all line-clamp-3"
+            >
               XDR Payload: {transactionXdr}
             </Text>
           </div>
 
           {error && (
-            <div className="flex items-start gap-3 rounded-lg border border-red-500/50 bg-red-500/10 p-4 animate-in shake duration-500" role="alert">
+            <div
+              className="flex items-start gap-3 rounded-lg border border-red-500/50 bg-red-500/10 p-4 animate-in shake duration-500"
+              role="alert"
+            >
               <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
               <Text variant="small" className="text-red-200">
                 {error}

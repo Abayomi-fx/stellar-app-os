@@ -12,6 +12,8 @@ import { Checkbox } from '@/components/atoms/Checkbox';
 import { ProgressStepper } from '@/components/molecules/ProgressStepper/ProgressStepper';
 import { AnonymousDonationToggle } from '@/components/molecules/AnonymousDonationToggle/AnonymousDonationToggle';
 import { useDonationContext } from '@/contexts/DonationContext';
+import { GiftTreeForm } from '@/components/organisms/GiftTreeForm/GiftTreeForm';
+import { isValidGiftDetails } from '@/lib/types/gift';
 import { donorInfoSchema, type DonorInfoFormData } from '@/lib/schemas/donor';
 
 const steps = [
@@ -23,7 +25,7 @@ const steps = [
 
 export function DonorInfoStep() {
   const router = useRouter();
-  const { state, setDonorInfo } = useDonationContext();
+  const { state, setDonorInfo, setGift } = useDonationContext();
 
   const [isAnonymousMode, setIsAnonymousMode] = useState(false);
 
@@ -90,10 +92,7 @@ export function DonorInfoStep() {
         </div>
 
         {/* Privacy-Preserving Donation Toggle */}
-        <AnonymousDonationToggle
-          isAnonymous={isAnonymousMode}
-          onToggle={setIsAnonymousMode}
-        />
+        <AnonymousDonationToggle isAnonymous={isAnonymousMode} onToggle={setIsAnonymousMode} />
 
         {/* Form Card */}
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
@@ -187,6 +186,12 @@ export function DonorInfoStep() {
               )}
             </div>
 
+            <GiftTreeForm
+              treeCount={Math.max(state.treeCount, 1)}
+              gift={state.gift}
+              onChange={(gift) => setGift(gift)}
+            />
+
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
@@ -206,7 +211,7 @@ export function DonorInfoStep() {
                 size="lg"
                 stellar="primary"
                 className="sm:flex-[2]"
-                disabled={!isValid}
+                disabled={!isValid || !isValidGiftDetails(state.gift)}
                 aria-label="Continue to payment step"
               >
                 Continue to Payment

@@ -1,5 +1,5 @@
-import React from "react";
-import { Skeleton } from "@/components/atoms/Skeleton";
+import React from 'react';
+import { Skeleton } from '@/components/atoms/Skeleton';
 
 interface TableRowSkeletonProps {
   columns?: number;
@@ -8,7 +8,7 @@ interface TableRowSkeletonProps {
 
 export function TableRowSkeleton({
   columns = 4,
-  className = "",
+  className = '',
 }: TableRowSkeletonProps): React.ReactNode {
   return (
     <tr className={`border-b border-border ${className}`}>
@@ -24,7 +24,7 @@ export function TableRowSkeleton({
 export function TableSkeletonRows({
   rows = 5,
   columns = 4,
-  className = "",
+  className = '',
 }: {
   rows?: number;
   columns?: number;

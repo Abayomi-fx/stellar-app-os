@@ -1,6 +1,6 @@
 'use client';
 
-import { JSX, useMemo } from 'react';
+import { type JSX, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PiHouseBold, PiCaretRightBold } from 'react-icons/pi';
@@ -137,9 +137,7 @@ export function Breadcrumbs({
     }
 
     // Split pathname into segments
-    const segments = pathname
-      .split('/')
-      .filter((segment) => segment.length > 0);
+    const segments = pathname.split('/').filter((segment) => segment.length > 0);
 
     const items: BreadcrumbItem[] = [];
 
@@ -176,10 +174,7 @@ export function Breadcrumbs({
   }
 
   return (
-    <nav
-      className="mx-auto max-w-6xl px-4 py-3 sm:px-6 lg:px-8"
-      aria-label="Breadcrumb"
-    >
+    <nav className="mx-auto max-w-6xl px-4 py-3 sm:px-6 lg:px-8" aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-1 text-sm sm:gap-2">
         {/* Home Link */}
         <li>
@@ -189,9 +184,7 @@ export function Breadcrumbs({
             onClick={() => onNavigate?.('/')}
             aria-label="Home"
           >
-            {showHomeIcon && (
-              <PiHouseBold className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-            )}
+            {showHomeIcon && <PiHouseBold className="h-4 w-4 flex-shrink-0" aria-hidden="true" />}
             <span className="hidden sm:inline">Home</span>
             <span className="sm:hidden">Home</span>
           </Link>
@@ -200,7 +193,7 @@ export function Breadcrumbs({
         {/* Breadcrumb Items */}
         {breadcrumbs.length > 0 && (
           <>
-            {breadcrumbs.map((item, index) => (
+            {breadcrumbs.map((item) => (
               <li key={item.href} className="flex items-center gap-1 sm:gap-2">
                 {/* Separator */}
                 <PiCaretRightBold

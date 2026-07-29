@@ -6,7 +6,7 @@ import type { DonationPaymentMethod } from '@/lib/types/donation-payment';
 
 interface PaymentMethodToggleProps {
   selected: DonationPaymentMethod;
-  onChange: (_method: DonationPaymentMethod) => void; // eslint-disable-line no-unused-vars
+  onChange: (_method: DonationPaymentMethod) => void;
   disabled?: boolean;
 }
 

@@ -10,6 +10,7 @@
  */
 
 import type { GeneratedProof, SnarkjsProof, ZkProof, ProofInputs } from './types';
+import type * as Snarkjs from 'snarkjs';
 
 // Paths to the circuit artifacts (served from /public/circuits/)
 const WASM_PATH = '/circuits/circuit1_donation.wasm';
@@ -19,7 +20,8 @@ const ZKEY_PATH = '/circuits/circuit1_donation_final.zkey';
 
 /** SHA-256 of arbitrary bytes, returns hex string. */
 async function sha256Hex(data: Uint8Array): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(data);
+  const buf = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
@@ -77,9 +79,7 @@ export async function generateDonationProof(
   const nullifierHex = await sha256Hex(concat(secretBytes, saltBytes));
 
   // Derive nullifier_hash = SHA-256(nullifier)
-  const nullifierBytes = new Uint8Array(
-    nullifierHex.match(/.{2}/g)!.map((b) => parseInt(b, 16))
-  );
+  const nullifierBytes = new Uint8Array(nullifierHex.match(/.{2}/g)!.map((b) => parseInt(b, 16)));
   const nullifierHashHex = await sha256Hex(nullifierBytes);
 
   // Build snarkjs circuit inputs
@@ -113,8 +113,8 @@ export async function generateDonationProof(
 
   // Public inputs from snarkjs output (commitment, nullifier_hash)
   const inputs: ProofInputs = {
-    commitment:     bigIntToHex32(BigInt(publicSignals[0])),
-    nullifierHash:  bigIntToHex32(BigInt(publicSignals[1])),
+    commitment: bigIntToHex32(BigInt(publicSignals[0])),
+    nullifierHash: bigIntToHex32(BigInt(publicSignals[1])),
   };
 
   return {
@@ -198,12 +198,10 @@ function bigIntToHex32(n: bigint): string {
 }
 
 /** Dynamically import snarkjs (browser/Node compatible). */
-async function importSnarkjs(): Promise<typeof import('snarkjs')> {
+async function importSnarkjs(): Promise<typeof Snarkjs> {
   try {
     return await import('snarkjs');
   } catch {
-    throw new Error(
-      'snarkjs is not installed. Run: npm install snarkjs'
-    );
+    throw new Error('snarkjs is not installed. Run: npm install snarkjs');
   }
 }

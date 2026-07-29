@@ -68,7 +68,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
         <div className={`p-3 rounded-full bg-white ${verification.iconClass} shadow-sm`}>
           <Shield className="w-8 h-8" strokeWidth={2.5} />
         </div>
-        
+
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-lg font-bold text-gray-900">Oracle Verification</h3>
@@ -76,7 +76,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
               <StatusIcon className="w-4 h-4" />
             </div>
           </div>
-          
+
           <p className={`text-sm font-semibold ${verification.iconClass} mb-3`}>
             {verification.message}
           </p>
@@ -99,17 +99,24 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div 
+                <div
                   className={`h-full ${verification.badgeClass} transition-all duration-500`}
-                  style={{ 
-                    width: verification.status === 'verified' ? '100%' : 
-                           verification.status === 'stale' ? '60%' : '30%' 
+                  style={{
+                    width:
+                      verification.status === 'verified'
+                        ? '100%'
+                        : verification.status === 'stale'
+                          ? '60%'
+                          : '30%',
                   }}
                 />
               </div>
               <span className="text-xs font-medium text-gray-600">
-                {verification.status === 'verified' ? '100%' : 
-                 verification.status === 'stale' ? '60%' : '30%'}
+                {verification.status === 'verified'
+                  ? '100%'
+                  : verification.status === 'stale'
+                    ? '60%'
+                    : '30%'}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-2">Data freshness indicator</p>

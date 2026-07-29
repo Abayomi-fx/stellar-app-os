@@ -31,9 +31,7 @@ export function VoterWeightCard({
 
       {/* Total Voting Power */}
       <div className="mb-6">
-        <p className="text-3xl font-bold text-gray-900">
-          {totalVotingPower.toLocaleString()}
-        </p>
+        <p className="text-3xl font-bold text-gray-900">{totalVotingPower.toLocaleString()}</p>
         <p className="text-sm text-gray-500 mt-1">Total Voting Power</p>
       </div>
 
@@ -111,8 +109,8 @@ export function VoterWeightCard({
       {/* Info text */}
       <div className="mt-4 p-3 bg-blue-50 rounded-lg">
         <p className="text-xs text-blue-800">
-          Your influence is calculated based on your participation history as both a
-          farmer and investor in the platform.
+          Your influence is calculated based on your participation history as both a farmer and
+          investor in the platform.
         </p>
       </div>
     </motion.div>

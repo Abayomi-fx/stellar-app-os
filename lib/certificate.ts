@@ -50,7 +50,9 @@ export function getExplorerUrl(txHash: string, baseUrl?: string): string {
   return `${base}/${txHash}`;
 }
 
-export function getDisplayName(data: Pick<CertificateData, 'userName' | 'walletAddress' | 'isAnonymous'>): string {
+export function getDisplayName(
+  data: Pick<CertificateData, 'userName' | 'walletAddress' | 'isAnonymous'>
+): string {
   if (data.isAnonymous) return 'Anonymous Donor';
   return data.userName?.trim() || data.walletAddress;
 }
@@ -114,30 +116,26 @@ export function generateCertificatePdf({ qrDataUrl, data }: GenerateCertificateO
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(STELLAR_NAVY);
-  doc.text('has contributed to environmental restoration through', PAGE_W / 2, y, { align: 'center' });
+  doc.text('has contributed to environmental restoration through', PAGE_W / 2, y, {
+    align: 'center',
+  });
 
   // Impact Stats
   y += 12;
   doc.setFillColor(LIGHT_GRAY);
   doc.roundedRect(MARGIN, y - 7, CONTENT_W, 24, 3, 3, 'F');
-  
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(STELLAR_NAVY);
-  doc.text(
-    `${data.treeCount.toLocaleString()} Trees Planted`,
-    PAGE_W / 4 + 10,
-    y + 4,
-    { align: 'center' }
-  );
+  doc.text(`${data.treeCount.toLocaleString()} Trees Planted`, PAGE_W / 4 + 10, y + 4, {
+    align: 'center',
+  });
 
-  doc.text(
-    `${data.co2Offset.toLocaleString()} tCO2e Offset`,
-    (PAGE_W * 3) / 4 - 10,
-    y + 4,
-    { align: 'center' }
-  );
-  
+  doc.text(`${data.co2Offset.toLocaleString()} tCO2e Offset`, (PAGE_W * 3) / 4 - 10, y + 4, {
+    align: 'center',
+  });
+
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(MID_GRAY);
@@ -155,7 +153,9 @@ export function generateCertificatePdf({ qrDataUrl, data }: GenerateCertificateO
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(STELLAR_BLUE);
-  doc.text(`${data.region} · Planted ${formatDate(data.plantingDate)}`, PAGE_W / 2, y, { align: 'center' });
+  doc.text(`${data.region} · Planted ${formatDate(data.plantingDate)}`, PAGE_W / 2, y, {
+    align: 'center',
+  });
 
   y += 8;
   doc.setFont('helvetica', 'normal');

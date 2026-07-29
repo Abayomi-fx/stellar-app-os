@@ -43,8 +43,6 @@ export default function NotFound() {
       <p className="text-muted-foreground max-w-md mb-8">
         Oops — the page you&apos;re looking for doesn’t exist or may have been moved. Try searching
         or explore one of the links below.
-        Oops — the page you're looking for doesn’t exist or may have been moved. Try searching or
-        explore one of the links below.
       </p>
 
       <form

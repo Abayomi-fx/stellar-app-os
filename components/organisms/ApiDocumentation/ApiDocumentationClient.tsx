@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
-import { Input } from "@/components/atoms/Input";
-import { Button } from "@/components/atoms/Button";
+import { useMemo, useState } from 'react';
+import { Input } from '@/components/atoms/Input';
+import { Button } from '@/components/atoms/Button';
 
-type HttpMethod = "GET" | "POST" | "HEAD";
-type CodeLanguage = "curl" | "javascript" | "python";
+type HttpMethod = 'GET' | 'POST' | 'HEAD';
+type CodeLanguage = 'curl' | 'javascript' | 'python';
 
 interface EndpointErrorExample {
   status: number;
@@ -33,178 +33,178 @@ interface RateLimitRule {
 
 const endpointDocs: EndpointDoc[] = [
   {
-    id: "health-get",
-    title: "Health Check",
-    method: "GET",
-    path: "/api/health",
-    description: "Returns API health status and the current server timestamp.",
-    tags: ["health", "status", "monitoring"],
+    id: 'health-get',
+    title: 'Health Check',
+    method: 'GET',
+    path: '/api/health',
+    description: 'Returns API health status and the current server timestamp.',
+    tags: ['health', 'status', 'monitoring'],
     responseExample: {
-      status: "ok",
-      timestamp: "2026-02-25T11:00:00.000Z",
+      status: 'ok',
+      timestamp: '2026-02-25T11:00:00.000Z',
     },
     errorExamples: [],
   },
   {
-    id: "health-head",
-    title: "Health Check (Headers Only)",
-    method: "HEAD",
-    path: "/api/health",
-    description: "Returns status code only with no response body.",
-    tags: ["health", "status", "monitoring"],
+    id: 'health-head',
+    title: 'Health Check (Headers Only)',
+    method: 'HEAD',
+    path: '/api/health',
+    description: 'Returns status code only with no response body.',
+    tags: ['health', 'status', 'monitoring'],
     responseExample: null,
     errorExamples: [],
   },
   {
-    id: "wallet-create",
-    title: "Create Custodial Wallet",
-    method: "POST",
-    path: "/api/wallet/create",
+    id: 'wallet-create',
+    title: 'Create Custodial Wallet',
+    method: 'POST',
+    path: '/api/wallet/create',
     description:
-      "Creates a mock custodial wallet keypair and returns the public key and selected network.",
-    tags: ["wallet", "onboarding", "custodial"],
+      'Creates a mock custodial wallet keypair and returns the public key and selected network.',
+    tags: ['wallet', 'onboarding', 'custodial'],
     requestExample: {
-      network: "testnet",
+      network: 'testnet',
     },
     responseExample: {
-      publicKey: "G1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF12345",
-      network: "testnet",
+      publicKey: 'G1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF12345',
+      network: 'testnet',
     },
     errorExamples: [
       {
         status: 500,
         body: {
-          error: "Failed to create custodial wallet",
+          error: 'Failed to create custodial wallet',
         },
       },
     ],
   },
   {
-    id: "transaction-build",
-    title: "Build Payment Transaction",
-    method: "POST",
-    path: "/api/transaction/build",
+    id: 'transaction-build',
+    title: 'Build Payment Transaction',
+    method: 'POST',
+    path: '/api/transaction/build',
     description:
-      "Builds an unsigned Stellar payment transaction (XDR) from credit selection and wallet context.",
-    tags: ["transaction", "payments", "stellar", "xdr"],
+      'Builds an unsigned Stellar payment transaction (XDR) from credit selection and wallet context.',
+    tags: ['transaction', 'payments', 'stellar', 'xdr'],
     requestExample: {
       selection: {
-        projectId: "project-001",
+        projectId: 'project-001',
         quantity: 12,
         calculatedPrice: 300,
       },
-      walletPublicKey:
-        "GABEMKJNR4GK7M4FROGA7I7PG63N2CKE3EGDSBSISG56SVL2O3KRNDXA",
-      network: "testnet",
-      idempotencyKey: "f2f399f0-c1b0-4df9-beb1-7eeb2b20c5e7",
+      walletPublicKey: 'GABEMKJNR4GK7M4FROGA7I7PG63N2CKE3EGDSBSISG56SVL2O3KRNDXA',
+      network: 'testnet',
+      idempotencyKey: 'f2f399f0-c1b0-4df9-beb1-7eeb2b20c5e7',
     },
     responseExample: {
-      transactionXdr: "AAAAAgAAAAB5...EXAMPLE...AAA=",
-      networkPassphrase: "Test SDF Network ; September 2015",
+      transactionXdr: 'AAAAAgAAAAB5...EXAMPLE...AAA=',
+      networkPassphrase: 'Test SDF Network ; September 2015',
     },
     errorExamples: [
       {
         status: 400,
         body: {
-          error: "Invalid selection",
+          error: 'Invalid selection',
         },
       },
       {
         status: 400,
         body: {
-          error: "Missing required parameters",
+          error: 'Missing required parameters',
         },
       },
       {
         status: 500,
         body: {
-          error: "Failed to build transaction",
+          error: 'Failed to build transaction',
         },
       },
     ],
   },
   {
-    id: "transaction-submit",
-    title: "Submit Signed Transaction",
-    method: "POST",
-    path: "/api/transaction/submit",
-    description: "Submits a signed Stellar XDR transaction to the selected network Horizon instance.",
-    tags: ["transaction", "payments", "stellar", "submission"],
-    requestExample: {
-      signedTransactionXdr: "AAAAAgAAAAB5...SIGNED...AAA=",
-      network: "testnet",
-    },
-    responseExample: {
-      transactionHash: "f3a8f48af7f0f8d6ea80a2be8d7ddf7896bc73dcb2ea8d8f85e5f8f65cbf8012",
-    },
-    errorExamples: [
-      {
-        status: 400,
-        body: {
-          error: "Missing required parameters",
-        },
-      },
-      {
-        status: 500,
-        body: {
-          error: "Transaction submission failed",
-        },
-      },
-    ],
-  },
-  {
-    id: "verify-email",
-    title: "Verify Email Token",
-    method: "POST",
-    path: "/api/verify-email",
+    id: 'transaction-submit',
+    title: 'Submit Signed Transaction',
+    method: 'POST',
+    path: '/api/transaction/submit',
     description:
-      "Validates a verification token and marks the mock verification state as complete.",
-    tags: ["email", "verification", "auth"],
+      'Submits a signed Stellar XDR transaction to the selected network Horizon instance.',
+    tags: ['transaction', 'payments', 'stellar', 'submission'],
     requestExample: {
-      token: "verification-token-value",
+      signedTransactionXdr: 'AAAAAgAAAAB5...SIGNED...AAA=',
+      network: 'testnet',
+    },
+    responseExample: {
+      transactionHash: 'f3a8f48af7f0f8d6ea80a2be8d7ddf7896bc73dcb2ea8d8f85e5f8f65cbf8012',
+    },
+    errorExamples: [
+      {
+        status: 400,
+        body: {
+          error: 'Missing required parameters',
+        },
+      },
+      {
+        status: 500,
+        body: {
+          error: 'Transaction submission failed',
+        },
+      },
+    ],
+  },
+  {
+    id: 'verify-email',
+    title: 'Verify Email Token',
+    method: 'POST',
+    path: '/api/verify-email',
+    description:
+      'Validates a verification token and marks the mock verification state as complete.',
+    tags: ['email', 'verification', 'auth'],
+    requestExample: {
+      token: 'verification-token-value',
     },
     responseExample: {
       success: true,
-      message: "Email verified successfully",
+      message: 'Email verified successfully',
     },
     errorExamples: [
       {
         status: 400,
         body: {
-          error: "missing",
-          message: "Token is missing",
+          error: 'missing',
+          message: 'Token is missing',
         },
       },
       {
         status: 400,
         body: {
-          error: "expired",
-          message: "Token has expired.",
+          error: 'expired',
+          message: 'Token has expired.',
         },
       },
       {
         status: 400,
         body: {
-          error: "invalid",
-          message: "Token is invalid.",
+          error: 'invalid',
+          message: 'Token is invalid.',
         },
       },
       {
         status: 500,
         body: {
-          error: "server_error",
-          message: "Internal server error",
+          error: 'server_error',
+          message: 'Internal server error',
         },
       },
     ],
   },
   {
-    id: "verify-email-status",
-    title: "Check Verification Status",
-    method: "GET",
-    path: "/api/verify-email/status",
-    description: "Returns the current mock email verification status.",
-    tags: ["email", "verification", "polling"],
+    id: 'verify-email-status',
+    title: 'Check Verification Status',
+    method: 'GET',
+    path: '/api/verify-email/status',
+    description: 'Returns the current mock email verification status.',
+    tags: ['email', 'verification', 'polling'],
     responseExample: {
       verified: true,
     },
@@ -212,29 +212,29 @@ const endpointDocs: EndpointDoc[] = [
       {
         status: 500,
         body: {
-          error: "server_error",
+          error: 'server_error',
         },
       },
     ],
   },
   {
-    id: "verify-email-resend",
-    title: "Resend Verification Email",
-    method: "POST",
-    path: "/api/verify-email/resend",
+    id: 'verify-email-resend',
+    title: 'Resend Verification Email',
+    method: 'POST',
+    path: '/api/verify-email/resend',
     description:
-      "Simulates resending a verification email and resets mock verification state to false.",
-    tags: ["email", "verification", "resend"],
+      'Simulates resending a verification email and resets mock verification state to false.',
+    tags: ['email', 'verification', 'resend'],
     responseExample: {
       success: true,
-      message: "Verification email sent!",
+      message: 'Verification email sent!',
     },
     errorExamples: [
       {
         status: 500,
         body: {
-          error: "server_error",
-          message: "Failed to resend email",
+          error: 'server_error',
+          message: 'Failed to resend email',
         },
       },
     ],
@@ -242,59 +242,59 @@ const endpointDocs: EndpointDoc[] = [
 ];
 
 const languageLabels: Record<CodeLanguage, string> = {
-  curl: "cURL",
-  javascript: "JavaScript",
-  python: "Python",
+  curl: 'cURL',
+  javascript: 'JavaScript',
+  python: 'Python',
 };
 
 const rateLimitRules: RateLimitRule[] = [
   {
-    route: "/api/health",
-    limit: "120 requests",
-    window: "1 minute",
-    notes: "High-frequency health checks are allowed.",
+    route: '/api/health',
+    limit: '120 requests',
+    window: '1 minute',
+    notes: 'High-frequency health checks are allowed.',
   },
   {
-    route: "/api/wallet/create",
-    limit: "30 requests",
-    window: "1 minute",
-    notes: "Protect against wallet creation abuse.",
+    route: '/api/wallet/create',
+    limit: '30 requests',
+    window: '1 minute',
+    notes: 'Protect against wallet creation abuse.',
   },
   {
-    route: "/api/transaction/*",
-    limit: "20 requests",
-    window: "1 minute",
-    notes: "Includes build and submit endpoints.",
+    route: '/api/transaction/*',
+    limit: '20 requests',
+    window: '1 minute',
+    notes: 'Includes build and submit endpoints.',
   },
   {
-    route: "/api/verify-email",
-    limit: "10 requests",
-    window: "5 minutes",
-    notes: "Token verification attempts.",
+    route: '/api/verify-email',
+    limit: '10 requests',
+    window: '5 minutes',
+    notes: 'Token verification attempts.',
   },
   {
-    route: "/api/verify-email/resend",
-    limit: "3 requests",
-    window: "15 minutes",
-    notes: "Prevents repeated resend attempts.",
+    route: '/api/verify-email/resend',
+    limit: '3 requests',
+    window: '15 minutes',
+    notes: 'Prevents repeated resend attempts.',
   },
 ];
 
 function methodStyle(method: HttpMethod): string {
-  if (method === "GET") {
-    return "bg-emerald-100 text-emerald-800";
+  if (method === 'GET') {
+    return 'bg-emerald-100 text-emerald-800';
   }
 
-  if (method === "POST") {
-    return "bg-blue-100 text-blue-800";
+  if (method === 'POST') {
+    return 'bg-blue-100 text-blue-800';
   }
 
-  return "bg-amber-100 text-amber-800";
+  return 'bg-amber-100 text-amber-800';
 }
 
 function formatJson(value: Record<string, unknown> | null): string {
   if (value === null) {
-    return "// No response body";
+    return '// No response body';
   }
 
   return JSON.stringify(value, null, 2);
@@ -314,30 +314,30 @@ function buildCurlSnippet(endpoint: EndpointDoc): string {
     `curl ${methodPart} ${urlPart} \\`,
     `  -H "Content-Type: application/json" \\`,
     `  -d '${body}'`,
-  ].join("\n");
+  ].join('\n');
 }
 
 function buildJavaScriptSnippet(endpoint: EndpointDoc): string {
-  const headers = endpoint.requestExample ? "headers: { \"Content-Type\": \"application/json\" }," : "";
+  const headers = endpoint.requestExample ? 'headers: { "Content-Type": "application/json" },' : '';
   const body = endpoint.requestExample
     ? `body: JSON.stringify(${JSON.stringify(endpoint.requestExample, null, 2)}),`
-    : "";
+    : '';
 
   return [
-    "const BASE_URL = \"https://your-domain.com\";",
-    "",
-    `const response = await fetch(\`${"${BASE_URL}"}${endpoint.path}\`, {`,
+    'const BASE_URL = "https://your-domain.com";',
+    '',
+    `const response = await fetch(\`${'${BASE_URL}'}${endpoint.path}\`, {`,
     `  method: \"${endpoint.method}\",`,
-    headers ? `  ${headers}` : "",
-    body ? `  ${body}` : "",
-    "});",
-    "",
-    endpoint.method === "HEAD"
-      ? "console.log(response.status);"
-      : "console.log(await response.json());",
+    headers ? `  ${headers}` : '',
+    body ? `  ${body}` : '',
+    '});',
+    '',
+    endpoint.method === 'HEAD'
+      ? 'console.log(response.status);'
+      : 'console.log(await response.json());',
   ]
     .filter(Boolean)
-    .join("\n");
+    .join('\n');
 }
 
 function buildPythonSnippet(endpoint: EndpointDoc): string {
@@ -345,30 +345,28 @@ function buildPythonSnippet(endpoint: EndpointDoc): string {
 
   if (!endpoint.requestExample) {
     return [
-      "import requests",
-      "",
+      'import requests',
+      '',
       'BASE_URL = "https://your-domain.com"',
-      "",
+      '',
       `response = requests.${methodLower}(f"{BASE_URL}${endpoint.path}", timeout=10)`,
-      endpoint.method === "HEAD"
-        ? "print(response.status_code)"
-        : "print(response.json())",
-    ].join("\n");
+      endpoint.method === 'HEAD' ? 'print(response.status_code)' : 'print(response.json())',
+    ].join('\n');
   }
 
   return [
-    "import requests",
-    "",
+    'import requests',
+    '',
     'BASE_URL = "https://your-domain.com"',
     `payload = ${JSON.stringify(endpoint.requestExample, null, 2)}`,
-    "",
+    '',
     `response = requests.${methodLower}(`,
     `    f"{BASE_URL}${endpoint.path}",`,
-    "    json=payload,",
-    "    timeout=10,",
-    ")",
-    "print(response.json())",
-  ].join("\n");
+    '    json=payload,',
+    '    timeout=10,',
+    ')',
+    'print(response.json())',
+  ].join('\n');
 }
 
 function buildCodeSamples(endpoint: EndpointDoc): Record<CodeLanguage, string> {
@@ -380,30 +378,30 @@ function buildCodeSamples(endpoint: EndpointDoc): Record<CodeLanguage, string> {
 }
 
 async function copyText(value: string): Promise<boolean> {
-  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(value);
     return true;
   }
 
-  if (typeof document === "undefined") {
+  if (typeof document === 'undefined') {
     return false;
   }
 
-  const textarea = document.createElement("textarea");
+  const textarea = document.createElement('textarea');
   textarea.value = value;
-  textarea.setAttribute("readonly", "true");
-  textarea.style.position = "absolute";
-  textarea.style.left = "-9999px";
+  textarea.setAttribute('readonly', 'true');
+  textarea.style.position = 'absolute';
+  textarea.style.left = '-9999px';
   document.body.appendChild(textarea);
   textarea.select();
-  const successful = document.execCommand("copy");
+  const successful = document.execCommand('copy');
   document.body.removeChild(textarea);
   return successful;
 }
 
 export function ApiDocumentationClient() {
-  const [query, setQuery] = useState("");
-  const [activeLanguage, setActiveLanguage] = useState<CodeLanguage>("curl");
+  const [query, setQuery] = useState('');
+  const [activeLanguage, setActiveLanguage] = useState<CodeLanguage>('curl');
   const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null);
 
   const filteredEndpoints = useMemo(() => {
@@ -419,9 +417,9 @@ export function ApiDocumentationClient() {
         endpoint.method,
         endpoint.path,
         endpoint.description,
-        endpoint.tags.join(" "),
+        endpoint.tags.join(' '),
       ]
-        .join(" ")
+        .join(' ')
         .toLowerCase();
 
       return searchableText.includes(normalized);
@@ -456,13 +454,15 @@ export function ApiDocumentationClient() {
             FarmCredit API Documentation
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-            Public API reference for integrations. Use the search to filter endpoints by
-            name, method, path, or tags.
+            Public API reference for integrations. Use the search to filter endpoints by name,
+            method, path, or tags.
           </p>
           <div className="mt-4 rounded-lg border border-stellar-blue/20 bg-stellar-blue/5 p-4">
             <p className="text-sm text-foreground">
-              <span className="font-semibold">Base URL:</span>{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">https://your-domain.com</code>
+              <span className="font-semibold">Base URL:</span>{' '}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                https://your-domain.com
+              </code>
             </p>
           </div>
         </header>
@@ -475,12 +475,8 @@ export function ApiDocumentationClient() {
             Authentication
           </h2>
           <div className="mt-4 space-y-3 text-sm text-muted-foreground sm:text-base">
-            <p>
-              Current API routes are public and do not require an API key or bearer token.
-            </p>
-            <p>
-              Clients should still use HTTPS and avoid embedding secrets in request bodies.
-            </p>
+            <p>Current API routes are public and do not require an API key or bearer token.</p>
+            <p>Clients should still use HTTPS and avoid embedding secrets in request bodies.</p>
             <p>
               For write-sensitive operations, authentication and signed request validation are
               recommended before production rollout.
@@ -548,7 +544,7 @@ export function ApiDocumentationClient() {
               </h2>
               <p className="mt-2 text-sm text-muted-foreground sm:text-base">
                 {filteredEndpoints.length} endpoint
-                {filteredEndpoints.length === 1 ? "" : "s"} shown
+                {filteredEndpoints.length === 1 ? '' : 's'} shown
               </p>
             </div>
             <div className="w-full sm:max-w-sm">
@@ -596,7 +592,9 @@ export function ApiDocumentationClient() {
                     <td className="px-3 py-2 align-top font-mono text-xs text-foreground sm:text-sm">
                       {endpoint.path}
                     </td>
-                    <td className="px-3 py-2 align-top text-muted-foreground">{endpoint.description}</td>
+                    <td className="px-3 py-2 align-top text-muted-foreground">
+                      {endpoint.description}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -608,7 +606,7 @@ export function ApiDocumentationClient() {
               <Button
                 key={language}
                 type="button"
-                variant={activeLanguage === language ? "default" : "outline"}
+                variant={activeLanguage === language ? 'default' : 'outline'}
                 size="sm"
                 aria-pressed={activeLanguage === language}
                 onClick={() => setActiveLanguage(language)}
@@ -689,7 +687,7 @@ export function ApiDocumentationClient() {
                         onClick={() => handleCopy(snippetId, snippets[activeLanguage])}
                         aria-label={`Copy ${languageLabels[activeLanguage]} sample for ${endpoint.path}`}
                       >
-                        {isCopied ? "Copied" : "Copy"}
+                        {isCopied ? 'Copied' : 'Copy'}
                       </Button>
                     </div>
                     <pre className="mt-2 overflow-x-auto rounded-lg border border-border bg-stellar-navy p-3 text-xs text-white sm:text-sm">

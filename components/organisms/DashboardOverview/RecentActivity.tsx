@@ -1,6 +1,12 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/molecules/Card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/molecules/Card';
 import { Text } from '@/components/atoms/Text';
 import { cn } from '@/lib/utils';
 import type { UserActivity } from '@/types/user-dashboard';
@@ -19,7 +25,8 @@ export function RecentActivity({ activities }: RecentActivityProps) {
         </div>
         <CardTitle className="text-3xl font-black mb-4 tracking-tight">Welcome home!</CardTitle>
         <CardDescription className="max-w-md mx-auto text-lg text-muted-foreground/80 leading-relaxed font-medium">
-          Your environmental impact starts here. Plant trees, buy credits, or retire holdings to see your journey unfold.
+          Your environmental impact starts here. Plant trees, buy credits, or retire holdings to see
+          your journey unfold.
         </CardDescription>
         <button className="mt-10 rounded-full bg-stellar-blue px-10 py-4 font-bold text-white transition-all hover:bg-stellar-blue/90 hover:scale-105 active:scale-95 shadow-xl shadow-stellar-blue/30">
           Start Your Impact
@@ -32,7 +39,9 @@ export function RecentActivity({ activities }: RecentActivityProps) {
     <Card className="flex flex-col h-full bg-card/60 backdrop-blur-sm border-none shadow-sm rounded-3xl">
       <CardHeader className="p-10 pb-6">
         <CardTitle className="text-3xl font-black tracking-tight">Recent Activity</CardTitle>
-        <CardDescription className="text-lg font-medium text-muted-foreground/70">Track your latest environmental positive actions.</CardDescription>
+        <CardDescription className="text-lg font-medium text-muted-foreground/70">
+          Track your latest environmental positive actions.
+        </CardDescription>
       </CardHeader>
       <CardContent className="px-10 pb-10 overflow-y-auto max-h-[600px] custom-scrollbar">
         <div className="space-y-10 pt-4">
@@ -42,7 +51,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
               {idx < activities.length - 1 && (
                 <div className="absolute left-[23px] top-10 w-0.5 h-[calc(100%+24px)] bg-muted/40 group-hover:bg-stellar-blue/20 transition-colors" />
               )}
-              
+
               <div
                 className={cn(
                   'z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-8 ring-background/50 transition-all duration-300 group-hover:scale-110 shadow-sm',
@@ -53,14 +62,23 @@ export function RecentActivity({ activities }: RecentActivityProps) {
               </div>
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Text variant="body" className="text-lg font-extrabold tracking-tight group-hover:text-stellar-blue transition-colors">
+                  <Text
+                    variant="body"
+                    className="text-lg font-extrabold tracking-tight group-hover:text-stellar-blue transition-colors"
+                  >
                     {activity.title}
                   </Text>
-                  <Text variant="muted" className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-40">
+                  <Text
+                    variant="muted"
+                    className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-40"
+                  >
                     {formatTimestamp(activity.timestamp)}
                   </Text>
                 </div>
-                <Text variant="small" className="text-muted-foreground/80 leading-relaxed max-w-xl font-medium">
+                <Text
+                  variant="small"
+                  className="text-muted-foreground/80 leading-relaxed max-w-xl font-medium"
+                >
                   {activity.description}
                 </Text>
                 {activity.amount && (
@@ -120,7 +138,7 @@ function formatTimestamp(timestamp: string) {
   if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
   if (diffInHours < 24) return `${diffInHours}h ago`;
   if (diffInDays < 7) return `${diffInDays}d ago`;
-  
+
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
