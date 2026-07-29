@@ -4,6 +4,11 @@ import { Footer } from '@/components/organisms/Footer/Footer';
 import { WalletProvider } from '@/contexts/WalletContext';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+import { Header } from '@/components/organisms/Header/Header';
+import { Footer } from '@/components/organisms/Footer/Footer';
+import { WalletProvider } from '@/contexts/WalletContext';
+
+const inter = Inter({ subsets: ['latin'] });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://farmcredit.app';
 const siteName = 'FarmCredit';
@@ -106,7 +111,8 @@ export default function RootLayout({
           >
             Skip to main content
           </a>
-          {children}
+          <Header />
+          <main id="main-content">{children}</main>
           <Footer />
         </WalletProvider>
       </body>
