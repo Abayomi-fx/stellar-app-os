@@ -12,10 +12,6 @@
     "build:mainnet": "dotenvx run --env-file=.env.mainnet -- next build --webpack",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
     "lint:fix": "eslint . --fix",
     "lint:strict": "eslint . --max-warnings 0",
     "format": "prettier --write .",
@@ -24,10 +20,12 @@
     "indexer": "tsx lib/indexer/worker.ts",
     "indexer:events": "tsx lib/indexer/event-worker.ts",
     "integrity-check": "tsx lib/integrity-checker.ts",
-    "db:migrate": "node scripts/run-migrations.mjs",
     "db:migrate:species": "psql $DATABASE_URL -f db/migrations/002_create_species_catalogue.sql",
     "monitor:treasury": "tsx lib/monitor/worker.ts",
+
+
     "monitor:ttl-renewal": "tsx lib/monitor/ttlRenewalWorker.ts",
+
     "db:migrate:status": "node scripts/run-migrations.mjs status",
     "db:migrate:validate": "node scripts/run-migrations.mjs validate",
     "seed:species": "node scripts/seed-species.mjs",
@@ -35,6 +33,7 @@
     "prepare": "husky",
     "ticker": "tsx lib/ticker/worker.ts",
     "ticker:simulate": "dotenvx run -e TICKER_SIMULATE_TRADES=true -- tsx lib/ticker/worker.ts"
+    "indexer:cdc": "tsx lib/indexer/cdc-worker.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1037.0",
@@ -132,6 +131,9 @@
     "@vitejs/plugin-react": "^4.1.0",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "jsdom": "^22.0.0",
     "vitest": "^4.1.9"
   },
