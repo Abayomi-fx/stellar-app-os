@@ -84,6 +84,18 @@ pub struct FarmPlot {
     pub registered_at: u64,
 }
 
+/// Land tenure verification record storing hash of legal land title and validation signatures.
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct LandTenureVerification {
+    pub title_id: BytesN<32>,
+    pub land_title_hash: BytesN<32>,
+    pub farmer_id: Address,
+    pub validator_signature: Bytes,
+    pub verified_at: u64,
+    pub is_verified: bool,
+}
+
 // ── Contract ──────────────────────────────────────────────────────────────────
 
 
@@ -148,6 +160,50 @@ impl FarmerRegistry {
     /// Returns `true` if `validator` is currently registered.
     pub fn is_validator(env: Env, validator: Address) -> bool {
         Self::_is_validator(&env, &validator)
+    }
+
+    // ── Emergency Freeze Authority (admin-only) ───────────────────────────────
+
+    /// Freeze a compromised farmer address pending audit.
+    ///
+    /// Only the contract admin may call this.
+    /// Emits `(Frozen, wallet_address, true)`.
+    pub fn freeze_farmer(env: Env, admin: Address, wallet_address: Address) {
+        Self::assert_not_paused(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+
+        let key = Self::frozen_key(&env, &wallet_address);
+        env.storage().persistent().set(&key, &true);
+        env.storage().persistent().extend_ttl(&key, 518400, 1036800);
+
+        env.events().publish(
+            (symbol_short!("Frozen"), wallet_address.clone()),
+            true,
+        );
+    }
+
+    /// Unfreeze a farmer address.
+    ///
+    /// Only the contract admin may call this.
+    /// Emits `(Frozen, wallet_address, false)`.
+    pub fn unfreeze_farmer(env: Env, admin: Address, wallet_address: Address) {
+        Self::assert_not_paused(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+
+        let key = Self::frozen_key(&env, &wallet_address);
+        env.storage().persistent().remove(&key);
+
+        env.events().publish(
+            (symbol_short!("Frozen"), wallet_address.clone()),
+            false,
+        );
+    }
+
+    /// Returns `true` if `wallet_address` is frozen.
+    pub fn is_frozen(env: Env, wallet_address: Address) -> bool {
+        Self::_is_frozen(&env, &wallet_address)
     }
 
     // ── Write operations (validator-gated) ───────────────────────────────────
@@ -245,6 +301,7 @@ impl FarmerRegistry {
         Self::assert_not_paused(&env);
         validator.require_auth();
         wallet_address.require_auth();
+        Self::assert_not_frozen(&env, &wallet_address);
 
         Self::require_validator(&env, &validator);
         Self::assert_valid_region(&env, &new_region_geohash);
@@ -369,6 +426,7 @@ impl FarmerRegistry {
     pub fn set_available(env: Env, wallet_address: Address, available: bool) {
         Self::assert_not_paused(&env);
         wallet_address.require_auth();
+        Self::assert_not_frozen(&env, &wallet_address);
 
         if !env
             .storage()
@@ -414,6 +472,7 @@ impl FarmerRegistry {
         area_sqm: u64,
     ) {
         farmer.require_auth();
+        Self::assert_not_frozen(&env, &farmer);
 
         let len = coordinates.len();
         if len < 3 || len > 50 {
@@ -470,6 +529,92 @@ impl FarmerRegistry {
         plots
     }
 
+    /// Register and verify land tenure ownership for a farmer's plot/title.
+    ///
+    /// # Access
+    /// Both `validator` and `farmer` must sign the transaction (`require_auth()`).
+    /// `validator` must be a registered validator in the system.
+    ///
+    /// # Errors
+    /// - `NotValidator` — caller is not a registered validator
+    /// - `FarmerFrozen` — farmer is frozen
+    /// - `LandTenureAlreadyExists` — title_id is already registered
+    pub fn verify_land_tenure(
+        env: Env,
+        validator: Address,
+        farmer: Address,
+        title_id: BytesN<32>,
+        land_title_hash: BytesN<32>,
+        validator_signature: Bytes,
+    ) -> LandTenureVerification {
+        Self::assert_not_paused(&env);
+        validator.require_auth();
+        farmer.require_auth();
+
+        Self::require_validator(&env, &validator);
+        Self::assert_not_frozen(&env, &farmer);
+
+        let tenure_key = Self::land_tenure_key(&env, &title_id);
+        if env.storage().persistent().has(&tenure_key) {
+            panic_with_error!(&env, FarmerError::LandTenureAlreadyExists);
+        }
+
+        let verification = LandTenureVerification {
+            title_id: title_id.clone(),
+            land_title_hash: land_title_hash.clone(),
+            farmer_id: farmer.clone(),
+            validator_signature,
+            verified_at: env.ledger().timestamp(),
+            is_verified: true,
+        };
+
+        env.storage().persistent().set(&tenure_key, &verification);
+        env.storage().persistent().extend_ttl(&tenure_key, 518400, 1036800);
+
+        let farmer_tenures_key = Self::farmer_tenures_key(&env, &farmer);
+        let mut farmer_tenures: soroban_sdk::Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&farmer_tenures_key)
+            .unwrap_or_else(|| soroban_sdk::Vec::new(&env));
+
+        farmer_tenures.push_back(title_id.clone());
+        env.storage().persistent().set(&farmer_tenures_key, &farmer_tenures);
+        env.storage().persistent().extend_ttl(&farmer_tenures_key, 518400, 1036800);
+
+        env.events().publish(
+            (symbol_short!("LandTen"), farmer),
+            (title_id, land_title_hash),
+        );
+
+        verification
+    }
+
+    /// Retrieve a land tenure verification record by title ID.
+    pub fn get_land_tenure(env: Env, title_id: BytesN<32>) -> Option<LandTenureVerification> {
+        let tenure_key = Self::land_tenure_key(&env, &title_id);
+        env.storage().persistent().get(&tenure_key)
+    }
+
+    /// Retrieve all verified land tenures for a specific farmer.
+    pub fn get_farmer_land_tenures(env: Env, farmer: Address) -> soroban_sdk::Vec<LandTenureVerification> {
+        let farmer_tenures_key = Self::farmer_tenures_key(&env, &farmer);
+        let title_ids: soroban_sdk::Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&farmer_tenures_key)
+            .unwrap_or_else(|| soroban_sdk::Vec::new(&env));
+
+        let mut tenures = soroban_sdk::Vec::new(&env);
+        for i in 0..title_ids.len() {
+            let id = title_ids.get(i).unwrap();
+            if let Some(tenure) = env.storage().persistent().get::<_, LandTenureVerification>(&Self::land_tenure_key(&env, &id)) {
+                tenures.push_back(tenure);
+            }
+        }
+        tenures
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     fn require_admin(env: &Env, caller: &Address) {
@@ -500,6 +645,19 @@ impl FarmerRegistry {
         if !Self::_is_validator(env, caller) {
             panic_with_error!(env, FarmerError::NotValidator);
         }
+    }
+
+    fn assert_not_frozen(env: &Env, wallet: &Address) {
+        if Self::_is_frozen(env, wallet) {
+            panic_with_error!(env, FarmerError::FarmerFrozen);
+        }
+    }
+
+    fn _is_frozen(env: &Env, wallet: &Address) -> bool {
+        env.storage()
+            .persistent()
+            .get::<_, bool>(&Self::frozen_key(env, wallet))
+            .unwrap_or(false)
     }
 
     fn _is_validator(env: &Env, addr: &Address) -> bool {
@@ -539,6 +697,10 @@ impl FarmerRegistry {
         (symbol_short!("VALID"), addr.clone()).into_val(env)
     }
 
+    fn frozen_key(env: &Env, wallet: &Address) -> soroban_sdk::Val {
+        (symbol_short!("FROZEN"), wallet.clone()).into_val(env)
+    }
+
     fn version_counter_key(env: &Env, wallet: &Address) -> soroban_sdk::Val {
         (symbol_short!("VER"), wallet.clone()).into_val(env)
     }
@@ -557,6 +719,14 @@ impl FarmerRegistry {
 
     fn farmer_plots_key(env: &Env, farmer: &Address) -> soroban_sdk::Val {
         (symbol_short!("FPLOTS"), farmer.clone()).into_val(env)
+    }
+
+    fn land_tenure_key(env: &Env, title_id: &BytesN<32>) -> soroban_sdk::Val {
+        (symbol_short!("TENURE"), title_id.clone()).into_val(env)
+    }
+
+    fn farmer_tenures_key(env: &Env, farmer: &Address) -> soroban_sdk::Val {
+        (symbol_short!("FTENURE"), farmer.clone()).into_val(env)
     }
 }
 
@@ -968,5 +1138,99 @@ mod tests {
         
         client.register_plot(&farmer, &plot_id, &coords, &1000);
         client.register_plot(&farmer, &plot_id, &coords, &1000);
+    }
+
+    // ── Emergency Freeze Authority ───────────────────────────────────────────
+
+    #[test]
+    fn test_freeze_and_unfreeze() {
+        let (env, admin, _, client) = setup();
+        let farmer = Address::generate(&env);
+
+        assert!(!client.is_frozen(&farmer));
+
+        client.freeze_farmer(&admin, &farmer);
+        assert!(client.is_frozen(&farmer));
+
+        client.unfreeze_farmer(&admin, &farmer);
+        assert!(!client.is_frozen(&farmer));
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #3)")]
+    fn test_freeze_non_admin_rejected() {
+        let (env, _, _, client) = setup();
+        let attacker = Address::generate(&env);
+        let farmer = Address::generate(&env);
+
+        client.freeze_farmer(&attacker, &farmer);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #8)")]
+    fn test_frozen_farmer_cannot_update_profile() {
+        let (env, admin, validator, client) = setup();
+        let farmer = Address::generate(&env);
+        let (p1, h1) = doc(&env, 1);
+
+        client.register_farmer(&validator, &farmer, &h1, &p1, &region(&env, "s1"));
+        client.freeze_farmer(&admin, &farmer);
+
+        let (p2, h2) = doc(&env, 2);
+        client.update_profile(&validator, &farmer, &h2, &p2, &region(&env, "s2"));
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #8)")]
+    fn test_frozen_farmer_cannot_set_available() {
+        let (env, admin, validator, client) = setup();
+        let farmer = Address::generate(&env);
+        let (p1, h1) = doc(&env, 1);
+
+        client.register_farmer(&validator, &farmer, &h1, &p1, &region(&env, "s1"));
+        client.freeze_farmer(&admin, &farmer);
+
+        client.set_available(&farmer, &false);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #8)")]
+    fn test_frozen_farmer_cannot_register_plot() {
+        let (env, admin, validator, client) = setup();
+        let farmer = Address::generate(&env);
+        let (p1, h1) = doc(&env, 1);
+
+        client.register_farmer(&validator, &farmer, &h1, &p1, &region(&env, "s1"));
+        client.freeze_farmer(&admin, &farmer);
+
+        let plot_id = BytesN::from_array(&env, &[5u8; 32]);
+        let mut coords = soroban_sdk::Vec::new(&env);
+        coords.push_back((1000000, 2000000));
+        coords.push_back((1000000, 2000001));
+        coords.push_back((1000001, 2000000));
+
+        client.register_plot(&farmer, &plot_id, &coords, &1000);
+    }
+
+    // ── Land Tenure Verification Tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_verify_land_tenure_success() {
+        let (env, _, validator, client) = setup();
+        let farmer = Address::generate(&env);
+        let title_id = BytesN::from_array(&env, &[10u8; 32]);
+        let land_title_hash = BytesN::from_array(&env, &[20u8; 32]);
+        let signature = Bytes::from_array(&env, &[1, 2, 3, 4]);
+
+        let verification = client.verify_land_tenure(&validator, &farmer, &title_id, &land_title_hash, &signature);
+        assert!(verification.is_verified);
+        assert_eq!(verification.farmer_id, farmer);
+        assert_eq!(verification.land_title_hash, land_title_hash);
+
+        let retrieved = client.get_land_tenure(&title_id).unwrap();
+        assert_eq!(retrieved.title_id, title_id);
+
+        let farmer_tenures = client.get_farmer_land_tenures(&farmer);
+        assert_eq!(farmer_tenures.len(), 1);
     }
 }
