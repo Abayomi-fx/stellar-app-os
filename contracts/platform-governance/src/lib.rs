@@ -64,6 +64,8 @@ pub enum ProposalType {
 pub enum ProposalStatus {
     Active,
     Passed,
+    /// Queued for execution — 48-hour timelock is running from `queued_at`
+    Queued,
     Rejected,
     Executed,
     Expired,
@@ -109,8 +111,10 @@ pub struct ProposalRecord {
     pub created_at: u64,
     /// Voting end timestamp
     pub voting_ends_at: u64,
-    /// Earliest execution timestamp (after timelock)
+    /// Earliest execution timestamp (after timelock, computed from queued_at)
     pub executable_at: u64,
+    /// Timestamp when the proposal was queued (0 = not yet queued)
+    pub queued_at: u64,
 }
 
 /// Record of a single vote
@@ -355,7 +359,8 @@ impl PlatformGovernance {
             total_votes: 0,
             created_at: now,
             voting_ends_at: now + voting_period,
-            executable_at: now + voting_period + timelock,
+            executable_at: 0, // set when queued
+            queued_at: 0,
         };
 
         env.storage().persistent().set(&proposal_key(id), &proposal);
@@ -519,10 +524,20 @@ impl PlatformGovernance {
         );
     }
 
-    /// Execute a passed proposal to update platform parameters.
+    /// Queue a passed proposal for execution, starting the 48-hour timelock.
     ///
-    /// `proposal_id` — proposal to execute
-    pub fn execute(env: Env, proposal_id: u64) {
+    /// This is a mandatory step between a proposal passing and being executed.
+    /// Any address may call `queue` — it is permissionless because the proposal
+    /// has already been democratically approved. The timelock begins at the
+    /// ledger timestamp of this call.
+    ///
+    /// # Errors
+    /// - Panics with `"proposal not found"` if `proposal_id` does not exist.
+    /// - Panics with `"proposal has not passed"` if status is not `Passed`.
+    ///
+    /// # Events
+    /// Emits `("proposal", "queued")` with `(proposal_id, executable_at)`.
+    pub fn queue(env: Env, proposal_id: u64) {
         Self::assert_not_paused(&env);
 
         let mut proposal: ProposalRecord = env
@@ -533,6 +548,56 @@ impl PlatformGovernance {
 
         if proposal.status != ProposalStatus::Passed {
             panic!("proposal has not passed");
+        }
+
+        let timelock: u64 = env
+            .storage()
+            .instance()
+            .get(&timelock_seconds_key())
+            .expect("not initialized");
+
+        let now = env.ledger().timestamp();
+        let executable_at = now + timelock;
+
+        proposal.status = ProposalStatus::Queued;
+        proposal.queued_at = now;
+        proposal.executable_at = executable_at;
+
+        env.storage()
+            .persistent()
+            .set(&proposal_key(proposal_id), &proposal);
+
+        env.events().publish(
+            (symbol_short!("proposal"), symbol_short!("queued")),
+            (proposal_id, executable_at),
+        );
+    }
+
+    /// Execute a queued proposal to update platform parameters.
+    ///
+    /// The proposal must be in `Queued` status and the 48-hour timelock
+    /// (measured from `queued_at`) must have elapsed.
+    ///
+    /// Any address may call `execute` — it is permissionless.
+    ///
+    /// # Errors
+    /// - Panics with `"proposal not found"` if `proposal_id` does not exist.
+    /// - Panics with `"proposal not queued for execution"` if status is not `Queued`.
+    /// - Panics with `"timelock period has not elapsed"` if called too early.
+    ///
+    /// # Events
+    /// Emits `("proposal", "executed")` with `(proposal_id, proposal_type)`.
+    pub fn execute(env: Env, proposal_id: u64) {
+        Self::assert_not_paused(&env);
+
+        let mut proposal: ProposalRecord = env
+            .storage()
+            .persistent()
+            .get(&proposal_key(proposal_id))
+            .expect("proposal not found");
+
+        if proposal.status != ProposalStatus::Queued {
+            panic!("proposal not queued for execution");
         }
 
         let now = env.ledger().timestamp();
@@ -1717,10 +1782,258 @@ mod tests {
         proposal.status = ProposalStatus::Passed;
         env.storage().persistent().set(&proposal_key(0), &proposal);
 
+        // Queue it — starts the 48h timelock
+        client.queue(&0);
+
+        // Advance past voting period and timelock (DEFAULT_TIMELOCK_SECONDS = 172800)
+        env.ledger().set_timestamp(env.ledger().timestamp() + 200000);
+
         client.execute(&0);
 
         let proposal = client.get_proposal(&0);
         assert!(matches!(proposal.status, ProposalStatus::Executed));
+    }
+
+    // ── Timelock controller tests (#752) ──────────────────────────────────────
+
+    /// Helper: create a proposal, manually mark it Passed, and return its ID.
+    fn create_passed_proposal(
+        env: &Env,
+        client: &PlatformGovernanceClient,
+        admin: &Address,
+        voting_period: u64,
+    ) -> u64 {
+        let mut options = Vec::new(env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(env, "Yes"),
+        });
+        client.create_proposal(
+            &String::from_str(env, "hash"),
+            &ProposalType::PlatformFee,
+            &options,
+            &voting_period,
+            admin,
+        );
+        let id = client.proposal_count() - 1;
+        let mut proposal = client.get_proposal(&id);
+        proposal.status = ProposalStatus::Passed;
+        env.storage().persistent().set(&proposal_key(id), &proposal);
+        id
+    }
+
+    #[test]
+    fn test_queue_transitions_passed_to_queued() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+
+        client.queue(&id);
+
+        let proposal = client.get_proposal(&id);
+        assert!(matches!(proposal.status, ProposalStatus::Queued));
+        assert!(proposal.queued_at > 0);
+        // executable_at must be queued_at + DEFAULT_TIMELOCK_SECONDS
+        assert_eq!(proposal.executable_at, proposal.queued_at + DEFAULT_TIMELOCK_SECONDS);
+    }
+
+    #[test]
+    fn test_queue_sets_executable_at_48h_from_now() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+
+        let before = env.ledger().timestamp();
+        client.queue(&id);
+
+        let proposal = client.get_proposal(&id);
+        assert_eq!(proposal.queued_at, before);
+        assert_eq!(proposal.executable_at, before + DEFAULT_TIMELOCK_SECONDS);
+    }
+
+    #[test]
+    fn test_full_lifecycle_create_vote_queue_execute() {
+        let (env, admin, _, _, client) = setup();
+
+        // 1. Create
+        let mut options = Vec::new(&env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(&env, "Set fee to 10%"),
+        });
+        client.create_proposal(
+            &String::from_str(&env, "hash"),
+            &ProposalType::PlatformFee,
+            &options,
+            &1,
+            &admin,
+        );
+        let id = 0u64;
+        assert!(matches!(client.get_proposal(&id).status, ProposalStatus::Active));
+
+        // 2. Vote — manually set Passed (simplified: skips quorum threshold)
+        let mut proposal = client.get_proposal(&id);
+        proposal.status = ProposalStatus::Passed;
+        env.storage().persistent().set(&proposal_key(id), &proposal);
+        assert!(matches!(client.get_proposal(&id).status, ProposalStatus::Passed));
+
+        // 3. Queue
+        client.queue(&id);
+        assert!(matches!(client.get_proposal(&id).status, ProposalStatus::Queued));
+
+        // 4. Advance past timelock
+        env.ledger().set_timestamp(env.ledger().timestamp() + DEFAULT_TIMELOCK_SECONDS + 1);
+
+        // 5. Execute
+        client.execute(&id);
+        assert!(matches!(client.get_proposal(&id).status, ProposalStatus::Executed));
+    }
+
+    #[test]
+    #[should_panic(expected = "proposal has not passed")]
+    fn test_queue_active_proposal_rejected() {
+        let (env, admin, _, _, client) = setup();
+        let mut options = Vec::new(&env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(&env, "Yes"),
+        });
+        client.create_proposal(
+            &String::from_str(&env, "hash"),
+            &ProposalType::PlatformFee,
+            &options,
+            &604800,
+            &admin,
+        );
+        // Proposal is Active, not Passed — must fail
+        client.queue(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "proposal has not passed")]
+    fn test_queue_already_queued_proposal_rejected() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+        client.queue(&id);
+        // Second queue call — now status is Queued, not Passed → must fail
+        client.queue(&id);
+    }
+
+    #[test]
+    #[should_panic(expected = "proposal not queued for execution")]
+    fn test_execute_passed_but_not_queued_rejected() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+        // Advance time past any timelock
+        env.ledger().set_timestamp(env.ledger().timestamp() + 300_000);
+        // Must fail — proposal is Passed but never queued
+        client.execute(&id);
+    }
+
+    #[test]
+    #[should_panic(expected = "proposal not queued for execution")]
+    fn test_execute_active_proposal_rejected() {
+        let (env, admin, _, _, client) = setup();
+        let mut options = Vec::new(&env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(&env, "Yes"),
+        });
+        client.create_proposal(
+            &String::from_str(&env, "hash"),
+            &ProposalType::PlatformFee,
+            &options,
+            &604800,
+            &admin,
+        );
+        client.execute(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "timelock period has not elapsed")]
+    fn test_execute_before_timelock_elapses_rejected() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+        client.queue(&id);
+        // Do NOT advance time — timelock has not elapsed
+        client.execute(&id);
+    }
+
+    #[test]
+    fn test_execute_exactly_at_timelock_boundary_succeeds() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+
+        let queue_time = env.ledger().timestamp();
+        client.queue(&id);
+
+        // Advance to exactly executable_at
+        env.ledger().set_timestamp(queue_time + DEFAULT_TIMELOCK_SECONDS);
+
+        client.execute(&id);
+        assert!(matches!(client.get_proposal(&id).status, ProposalStatus::Executed));
+    }
+
+    #[test]
+    fn test_timelock_duration_is_configurable() {
+        let (env, admin, _, _, client) = setup();
+
+        // Admin sets a custom 1-hour timelock
+        let one_hour = 3600u64;
+        client.update_timelock(&one_hour);
+        assert_eq!(client.timelock_seconds(), one_hour);
+
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+        let queue_time = env.ledger().timestamp();
+        client.queue(&id);
+
+        let proposal = client.get_proposal(&id);
+        assert_eq!(proposal.executable_at, queue_time + one_hour);
+
+        // Execute after 1 hour
+        env.ledger().set_timestamp(queue_time + one_hour);
+        client.execute(&id);
+        assert!(matches!(client.get_proposal(&id).status, ProposalStatus::Executed));
+    }
+
+    #[test]
+    #[should_panic(expected = "timelock must be > 0")]
+    fn test_set_zero_timelock_rejected() {
+        let (_, _, _, _, client) = setup();
+        client.update_timelock(&0);
+    }
+
+    #[test]
+    fn test_default_timelock_is_48_hours() {
+        let (_, _, _, _, client) = setup();
+        assert_eq!(client.timelock_seconds(), DEFAULT_TIMELOCK_SECONDS);
+        assert_eq!(DEFAULT_TIMELOCK_SECONDS, 172800); // 48 × 3600
+    }
+
+    #[test]
+    fn test_queued_at_and_executable_at_stored_correctly() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+
+        let t0 = env.ledger().timestamp();
+        client.queue(&id);
+
+        let p = client.get_proposal(&id);
+        assert_eq!(p.queued_at, t0);
+        assert_eq!(p.executable_at, t0 + DEFAULT_TIMELOCK_SECONDS);
+        assert_eq!(p.executable_at - p.queued_at, DEFAULT_TIMELOCK_SECONDS);
+    }
+
+    #[test]
+    fn test_execute_double_call_rejected() {
+        let (env, admin, _, _, client) = setup();
+        let id = create_passed_proposal(&env, &client, &admin, 1);
+        client.queue(&id);
+        env.ledger().set_timestamp(env.ledger().timestamp() + DEFAULT_TIMELOCK_SECONDS + 1);
+        client.execute(&id);
+        // Second execute — status is now Executed, not Queued → must panic
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            client.execute(&id);
+        }));
+        assert!(result.is_err());
     }
 
     // ── Delegation tests ──────────────────────────────────────────────────────
