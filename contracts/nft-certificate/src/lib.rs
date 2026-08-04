@@ -80,6 +80,8 @@ pub struct Token {
     pub issuer: Address,
     /// Token metadata
     pub metadata: CertificateMetadata,
+    /// Whether this token is soulbound (non-transferable)
+    pub soulbound: bool,
 }
 
 /// Issuer record — stores address and registration timestamp.
@@ -683,7 +685,7 @@ impl NftCertificate {
         String::from_str(&env, "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"400\"><rect width=\"100%\" height=\"100%\" fill=\"#1b4332\"/><text x=\"20\" y=\"40\" fill=\"#ffffff\">Harvesta NFT Certificate</text></svg>")
     }
 
-    // ── Internal ──────────────────────────────────────────────────────────────
+    // ── Internal ──────────────────────────────────────────────────────
 
     fn require_admin(env: &Env) {
         let admin: Address = env.storage().instance()
