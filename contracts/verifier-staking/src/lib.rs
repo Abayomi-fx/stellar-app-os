@@ -20,6 +20,8 @@ use soroban_sdk::{
 };
 use harvesta_errors::HarvestaError;
 
+pub const APPEAL_WINDOW_SECS: u64 = 259_200; // 72 hours
+
 #[contracterror]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -36,6 +38,26 @@ pub enum VerifierStakingError {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub enum SlashStatus {
+    Pending,
+    Appealed,
+    Executed,
+    Cancelled,
+}
+
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct SlashRequest {
+    pub id: u64,
+    pub verifier: Address,
+    pub slash_amount: i128,
+    pub requested_at: u64,
+    pub expires_at: u64,
+    pub status: SlashStatus,
+}
 
 #[contracttype]
 #[derive(Clone, Debug)]
@@ -204,7 +226,7 @@ impl VerifierStaking {
         }
 
         let key = DataKey::Stake(verifier.clone());
-        let mut rec: VerifierStake = env
+        let rec: VerifierStake = env
             .storage()
             .persistent()
             .get(&key).unwrap_or_else(|| panic_with_error!(&env, VerifierStakingError::VerifierNotStaked));
@@ -213,17 +235,104 @@ impl VerifierStaking {
             panic_with_error!(&env, VerifierStakingError::SlashExceedsStake);
         }
 
-        rec.amount -= slash_amount;
-        rec.slashed += slash_amount;
-        rec.slashed_to_buffer_pool += slash_amount;
+        let count: u64 = env.storage().instance().get(&DataKey::SlashCount).unwrap_or(0);
+        let slash_id = count + 1;
+        let requested_at = env.ledger().timestamp();
+        let expires_at = requested_at + APPEAL_WINDOW_SECS;
+
+        let request = SlashRequest {
+            id: slash_id,
+            verifier: verifier.clone(),
+            slash_amount,
+            requested_at,
+            expires_at,
+            status: SlashStatus::Pending,
+        };
+
+        env.storage().persistent().set(&DataKey::SlashRequest(slash_id), &request);
+        env.storage().instance().set(&DataKey::SlashCount, &slash_id);
+
+        env.events().publish(
+            (symbol_short!("slash_prp"), verifier),
+            (slash_id, slash_amount, expires_at),
+        );
+
+        slash_id
+    }
+
+    /// Verifier files an appeal against a proposed slash during the 72-hour challenge period.
+    pub fn appeal_slash(env: Env, verifier: Address, slash_id: u64, _reason: soroban_sdk::String) {
+        verifier.require_auth();
+
+        let mut req: SlashRequest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::SlashRequest(slash_id))
+            .unwrap_or_else(|| panic_with_error!(&env, VerifierStakingError::SlashNotFound));
+
+        if req.verifier != verifier {
+            panic_with_error!(&env, HarvestaError::Unauthorized);
+        }
+
+        if req.status != SlashStatus::Pending {
+            panic_with_error!(&env, VerifierStakingError::SlashAlreadyResolved);
+        }
+
+        if env.ledger().timestamp() > req.expires_at {
+            panic_with_error!(&env, VerifierStakingError::AppealWindowExpired);
+        }
+
+        req.status = SlashStatus::Appealed;
+        env.storage().persistent().set(&DataKey::SlashRequest(slash_id), &req);
+
+        env.events().publish(
+            (symbol_short!("slash_apl"), verifier),
+            slash_id,
+        );
+    }
+
+    /// Execute a slash after the 72-hour appeal window has passed without an approved challenge.
+    pub fn execute_slash(env: Env, slash_id: u64) {
+        let (admin, _, _, _, replanting_buffer_pool) = Self::config(&env);
+        admin.require_auth();
+
+        let mut req: SlashRequest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::SlashRequest(slash_id))
+            .unwrap_or_else(|| panic_with_error!(&env, VerifierStakingError::SlashNotFound));
+
+        if req.status != SlashStatus::Pending && req.status != SlashStatus::Appealed {
+            panic_with_error!(&env, VerifierStakingError::SlashAlreadyResolved);
+        }
+
+        if env.ledger().timestamp() < req.expires_at {
+            panic_with_error!(&env, VerifierStakingError::AppealWindowActive);
+        }
+
+        let key = DataKey::Stake(req.verifier.clone());
+        let mut rec: VerifierStake = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, VerifierStakingError::VerifierNotStaked));
+
+        let actual_slash = if req.slash_amount > rec.amount {
+            rec.amount
+        } else {
+            req.slash_amount
+        };
+
+        rec.amount -= actual_slash;
+        rec.slashed += actual_slash;
+        rec.slashed_to_buffer_pool += actual_slash;
         env.storage().persistent().set(&key, &rec);
 
-        if slash_amount > 0 {
-            let token = token::Client::new(&env, &rec.token);
-            token.transfer(
+        if actual_slash > 0 {
+            token::Client::new(&env, &rec.token).transfer(
                 &env.current_contract_address(),
                 &replanting_buffer_pool,
-                &slash_amount,
+                &actual_slash,
             );
         }
 
