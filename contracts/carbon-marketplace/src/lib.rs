@@ -582,6 +582,9 @@ impl CarbonMarketplace {
         if lp_shares <= 0 {
             panic_with_error!(&env, MarketplaceError::AmmAmountMustBePositive);
         }
+        if max_payment_amount <= 0 {
+            panic_with_error!(&env, MarketplaceError::PaymentAmountMustBePositive);
+        }
 
         let lp_key = DataKey::LpShares(provider.clone());
         let existing_shares: i128 = env

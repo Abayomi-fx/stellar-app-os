@@ -71,6 +71,24 @@ pub enum ZkError {
     NullifierSpent = 6,
 }
 
+impl From<ZkError> for soroban_sdk::Error {
+    fn from(err: ZkError) -> Self {
+        soroban_sdk::Error::from_contract_error(err as u32)
+    }
+}
+
+impl From<&ZkError> for soroban_sdk::Error {
+    fn from(err: &ZkError) -> Self {
+        soroban_sdk::Error::from_contract_error(*err as u32)
+    }
+}
+
+impl From<soroban_sdk::Error> for ZkError {
+    fn from(_: soroban_sdk::Error) -> Self {
+        ZkError::VerificationFailed
+    }
+}
+
 // ── Storage keys ──────────────────────────────────────────────────────────────
 
 /// Key under which the admin `Address` is stored in instance storage.
