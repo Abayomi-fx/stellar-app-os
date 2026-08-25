@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { TreePine, Wind, Globe, Layers, Plus, ChevronRight } from 'lucide-react';
 import { SponsorTreeList } from '@/components/organisms/SponsorTreeList';
+import { PooledSponsorshipPanel } from '@/components/organisms/PooledSponsorshipPanel';
 import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/atoms/Button';
 import { Skeleton } from '@/components/atoms/Skeleton';
@@ -321,6 +322,11 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
         </div>
 
         <SponsorTreeList initialFilters={initialFilters} />
+      </section>
+
+      {/* ── Pooled Sponsorship ──────────────────────────────────────────────── */}
+      <section className="px-4 pb-8 sm:px-8">
+        <PooledSponsorshipPanel />
       </section>
     </div>
   );
