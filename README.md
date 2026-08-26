@@ -268,6 +268,8 @@ npm start
 
 ## Project Architecture
 
+> 📖 **Full System Architecture**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for the high-level architecture diagram and data flows across smart contracts, frontend, backend, and IPFS.
+
 This project follows the **atomic design pattern**. Components are organized by complexity, not by feature.
 
 ```
