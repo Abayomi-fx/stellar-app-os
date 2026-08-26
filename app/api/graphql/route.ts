@@ -1,117 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { resolveTreeRegistryAnalytics, QueryFilter } from '@/lib/graphql/resolvers';
+import { ApolloServer } from '@apollo/server';
+import { HeaderMap } from '@apollo/server';
+import { NextRequest } from 'next/server';
+import { resolvers } from '@/lib/graphql/resolvers';
 import { typeDefs } from '@/lib/graphql/schema';
 
-interface GraphQLRequestBody {
-  query?: string;
-  variables?: Record<string, unknown>;
-  operationName?: string;
-}
+export const runtime = 'nodejs';
 
-export async function POST(req: NextRequest) {
-  try {
-    const body: GraphQLRequestBody = await req.json();
-    const { query, variables } = body;
+const apolloServer = new ApolloServer({
+  typeDefs,
+  resolvers,
+  introspection: true,
+});
 
-    if (!query) {
-      return NextResponse.json(
-        { errors: [{ message: 'Must provide query string.' }] },
-        { status: 400 }
-      );
-    }
+// Apollo Server is a long-lived module singleton in the Next.js server runtime.
+// Starting it once avoids a startup race when several clients hit the route.
+const serverStarted = apolloServer.start();
 
-    // Introspection query support
-    if (query.includes('__schema') || query.includes('__type')) {
-      return NextResponse.json({
-        data: {
-          __schema: {
-            queryType: { name: 'Query' },
-            types: [
-              { name: 'Query' },
-              { name: 'AggregateSequestration' },
-              { name: 'RegionMetrics' },
-              { name: 'SpeciesMetrics' },
-            ],
-          },
-        },
-      });
-    }
+export async function executeGraphQLRequest(request: NextRequest): Promise<Response> {
+  await serverStarted;
 
-    // Extract filters from query or variables
-    const region = (variables?.region as string) || extractQueryParam(query, 'region');
-    const species = (variables?.species as string) || extractQueryParam(query, 'species');
+  const httpGraphQLRequest = {
+    method: request.method,
+    headers: new HeaderMap(request.headers.entries()),
+    search: new URL(request.url).search,
+    body: request.method === 'GET' ? undefined : await request.json(),
+  } as const;
 
-    const filters: QueryFilter = {};
-    if (region) filters.region = region;
-    if (species) filters.species = species;
+  const response = await apolloServer.executeHTTPGraphQLRequest({
+    httpGraphQLRequest,
+    context: async () => ({ request }),
+  });
 
-    const analyticsData = await resolveTreeRegistryAnalytics(filters);
+  const headers = new Headers();
+  response.headers.forEach((value, key) => headers.set(key, value));
 
-    if (query.includes('metricsByRegion')) {
-      return NextResponse.json({
-        data: {
-          metricsByRegion: analyticsData.byRegion,
-        },
-      });
-    }
-
-    if (query.includes('metricsBySpecies')) {
-      return NextResponse.json({
-        data: {
-          metricsBySpecies: analyticsData.bySpecies,
-        },
-      });
-    }
-
-    return NextResponse.json({
-      data: {
-        treeRegistryAnalytics: analyticsData,
-        aggregateMetrics: analyticsData,
-      },
-    });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Internal server error';
-    console.error('[GraphQL API] Handler error:', err);
-    return NextResponse.json(
-      { errors: [{ message: errorMsg }] },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const query = searchParams.get('query');
-  const region = searchParams.get('region') || undefined;
-  const species = searchParams.get('species') || undefined;
-
-  if (query && (query.includes('__schema') || query.includes('__type'))) {
-    return NextResponse.json({
-      data: {
-        typeDefs,
-        status: 'GraphQL Tree Registry Analytics Gateway active',
-      },
+  if (response.body.kind !== 'complete') {
+    return new Response('Streaming GraphQL responses are not supported by this route.', {
+      status: 501,
+      headers,
     });
   }
 
-  try {
-    const analyticsData = await resolveTreeRegistryAnalytics({ region, species });
-    return NextResponse.json({
-      data: {
-        treeRegistryAnalytics: analyticsData,
-      },
-    });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Internal server error';
-    return NextResponse.json(
-      { errors: [{ message: errorMsg }] },
-      { status: 500 }
-    );
-  }
+  return new Response(response.body.string, {
+    status: response.status ?? 200,
+    headers,
+  });
 }
 
-function extractQueryParam(queryStr: string, paramName: string): string | undefined {
-  const regex = new RegExp(`${paramName}\\s*:\\s*"([^"]+)"`);
-  const match = queryStr.match(regex);
-  return match ? match[1] : undefined;
+export async function POST(request: NextRequest) {
+  return executeGraphQLRequest(request);
+}
+
+export async function GET(request: NextRequest) {
+  return executeGraphQLRequest(request);
 }
