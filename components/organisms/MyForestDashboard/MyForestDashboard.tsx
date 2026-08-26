@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { TreePine, Wind, Globe, Layers, Plus, ChevronRight } from 'lucide-react';
 import { SponsorTreeList } from '@/components/organisms/SponsorTreeList';
+import { TeamForestPanel } from '@/components/organisms/TeamForestPanel';
 import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/atoms/Button';
 import { Skeleton } from '@/components/atoms/Skeleton';
@@ -303,6 +304,8 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
           </div>
         )}
       </section>
+
+      <TeamForestPanel />
 
       {/* ===== TREE CARD GRID ===== */}
       <section aria-labelledby="forest-grid-heading">
