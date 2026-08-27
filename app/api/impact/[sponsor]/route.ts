@@ -7,6 +7,8 @@
  *
  * Path params:
  *   sponsor  — Stellar public key (G… 56-char base32)
+ * Query params:
+ *   status   — optional; one of All, Pending, Planted, Verified, Failed
  *
  * Responses:
  *   200  SponsorImpact JSON
@@ -40,7 +42,21 @@ export async function GET(
       );
     }
 
-    const impact = await getSponsorImpact(sponsor);
+    const requestedStatus = _request.nextUrl.searchParams.get('status');
+    const rawStatus = requestedStatus?.trim() ?? '';
+
+    const allowedStatuses = new Set(['all', 'pending', 'planted', 'verified', 'failed']);
+    if (rawStatus && !allowedStatuses.has(rawStatus.toLowerCase())) {
+      return NextResponse.json(
+        { error: 'Invalid status filter — must be one of: All, Pending, Planted, Verified, Failed' },
+        { status: 400 }
+      );
+    }
+
+    const filterStatus = rawStatus.toLowerCase() === 'all' ? '' : rawStatus.toLowerCase();
+    const impact = filterStatus
+      ? await getSponsorImpact(sponsor, filterStatus)
+      : await getSponsorImpact(sponsor);
 
     return NextResponse.json(impact, {
       headers: {
