@@ -44,6 +44,7 @@
     "@radix-ui/react-tabs": "^1.1.15",
     "@react-pdf/renderer": "^4.5.1",
     "@sendgrid/mail": "^8.1.4",
+    "@sentry/node": "^10.71.0",
     "@stellar/freighter-api": "^1.7.0",
     "@stellar/stellar-sdk": "^11.2.2",
     "@stripe/react-stripe-js": "^5.6.0",
