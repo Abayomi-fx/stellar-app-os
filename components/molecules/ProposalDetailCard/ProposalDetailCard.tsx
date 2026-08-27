@@ -94,15 +94,15 @@ const ProposalDetailCard = forwardRef<HTMLDivElement, Props>(
                 against: 'Vote Against',
                 abstain: 'Abstain',
               };
-              const stellarMap: Record<VoteOption, 'success' | 'destructive' | 'accent-outline'> = {
-                for: 'success',
-                against: 'destructive',
-                abstain: 'accent-outline',
+              const buttonProps: Record<VoteOption, { stellar?: 'success' | 'accent-outline'; variant?: 'destructive' }> = {
+                for: { stellar: 'success' },
+                against: { variant: 'destructive' },
+                abstain: { stellar: 'accent-outline' },
               };
               return (
                 <Button
                   key={option}
-                  stellar={stellarMap[option]}
+                  {...buttonProps[option]}
                   size="sm"
                   disabled={!isActive || (userVote !== null && !isSelected)}
                   aria-pressed={isSelected}
