@@ -1,11 +1,46 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, Image, Switch, ScrollView } from 'react-native';
-import { useState } from 'react';
+import * as Location from 'expo-location';
+import { StyleSheet, Text, View, Button, Image, Switch, ScrollView, TextInput } from 'react-native';
+import { useEffect, useState } from 'react';
 
 export default function App() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [syncStatus, setSyncStatus] = useState('All progress synced!');
+  const [gpsCoordinates, setGpsCoordinates] = useState('');
+  const [gpsStatus, setGpsStatus] = useState('Locating your position...');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function captureGpsOnLaunch() {
+      try {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (!permission.granted) {
+          if (isMounted) setGpsStatus('Location permission was denied. Enter coordinates manually.');
+          return;
+        }
+
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+        if (isMounted) {
+          setGpsCoordinates(
+            `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
+          );
+          setGpsStatus('GPS captured automatically.');
+        }
+      } catch {
+        if (isMounted) setGpsStatus('Unable to capture GPS. Enter coordinates manually.');
+      }
+    }
+
+    void captureGpsOnLaunch();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleUploadPhoto = () => {
     // Dummy handler for taking/picking a photo
@@ -33,6 +68,20 @@ export default function App() {
           <Switch value={isOffline} onValueChange={setIsOffline} />
         </View>
         <Text style={styles.statusText}>{syncStatus}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Planting Location</Text>
+        <Text style={styles.statusText}>{gpsStatus}</Text>
+        <TextInput
+          style={styles.input}
+          value={gpsCoordinates}
+          onChangeText={setGpsCoordinates}
+          placeholder="Latitude, longitude"
+          autoCapitalize="none"
+          autoCorrect={false}
+          accessibilityLabel="Planting GPS coordinates"
+        />
       </View>
 
       <View style={styles.section}>
@@ -93,6 +142,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: '#555',
     marginTop: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
   },
   image: {
     width: '100%',
