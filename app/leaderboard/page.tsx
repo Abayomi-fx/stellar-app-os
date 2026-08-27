@@ -296,9 +296,18 @@ function LeaderboardContent() {
                         className="w-16 h-16 rounded-full border-2 border-slate-400 object-cover mt-4 mb-3"
                       />
                     )}
-                    <span className="font-bold text-white text-lg block truncate max-w-full">
-                      {topThree[1].name || formatAddress(topThree[1].address)}
-                    </span>
+                    {category === 'sponsors' ? (
+                      <Link
+                        href={`/sponsors/${encodeURIComponent(topThree[1].address)}`}
+                        className="font-bold text-white text-lg block truncate max-w-full hover:text-stellar-blue"
+                      >
+                        {topThree[1].name || formatAddress(topThree[1].address)}
+                      </Link>
+                    ) : (
+                      <span className="font-bold text-white text-lg block truncate max-w-full">
+                        {topThree[1].name || formatAddress(topThree[1].address)}
+                      </span>
+                    )}
                     <span className="text-xs text-slate-400 block mb-4 truncate max-w-full">
                       {topThree[1].name ? formatAddress(topThree[1].address) : ''}
                     </span>
@@ -358,9 +367,18 @@ function LeaderboardContent() {
                         className="w-20 h-20 rounded-full border-2 border-amber-400 object-cover mt-4 mb-3"
                       />
                     )}
-                    <span className="font-bold text-white text-xl block truncate max-w-full">
-                      {topThree[0].name || formatAddress(topThree[0].address)}
-                    </span>
+                    {category === 'sponsors' ? (
+                      <Link
+                        href={`/sponsors/${encodeURIComponent(topThree[0].address)}`}
+                        className="font-bold text-white text-xl block truncate max-w-full hover:text-stellar-blue"
+                      >
+                        {topThree[0].name || formatAddress(topThree[0].address)}
+                      </Link>
+                    ) : (
+                      <span className="font-bold text-white text-xl block truncate max-w-full">
+                        {topThree[0].name || formatAddress(topThree[0].address)}
+                      </span>
+                    )}
                     <span className="text-xs text-slate-400 block mb-4 truncate max-w-full">
                       {topThree[0].name ? formatAddress(topThree[0].address) : ''}
                     </span>
@@ -420,9 +438,18 @@ function LeaderboardContent() {
                         className="w-16 h-16 rounded-full border-2 border-amber-700 object-cover mt-4 mb-3"
                       />
                     )}
-                    <span className="font-bold text-white text-lg block truncate max-w-full">
-                      {topThree[2].name || formatAddress(topThree[2].address)}
-                    </span>
+                    {category === 'sponsors' ? (
+                      <Link
+                        href={`/sponsors/${encodeURIComponent(topThree[2].address)}`}
+                        className="font-bold text-white text-lg block truncate max-w-full hover:text-stellar-blue"
+                      >
+                        {topThree[2].name || formatAddress(topThree[2].address)}
+                      </Link>
+                    ) : (
+                      <span className="font-bold text-white text-lg block truncate max-w-full">
+                        {topThree[2].name || formatAddress(topThree[2].address)}
+                      </span>
+                    )}
                     <span className="text-xs text-slate-400 block mb-4 truncate max-w-full">
                       {topThree[2].name ? formatAddress(topThree[2].address) : ''}
                     </span>
@@ -525,7 +552,16 @@ function LeaderboardContent() {
                             )}
                             <div>
                               <span className="font-semibold text-white block">
-                                {entry.name || formatAddress(entry.address)}
+                                {category === 'sponsors' ? (
+                                  <Link
+                                    href={`/sponsors/${encodeURIComponent(entry.address)}`}
+                                    className="hover:text-stellar-blue"
+                                  >
+                                    {entry.name || formatAddress(entry.address)}
+                                  </Link>
+                                ) : (
+                                  entry.name || formatAddress(entry.address)
+                                )}
                               </span>
                               {entry.name && (
                                 <span className="text-xs text-slate-500">
