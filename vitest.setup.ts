@@ -1,17 +1,11 @@
 import '@testing-library/jest-dom';
-import { expect, afterEach } from 'vitest';
+import { vi, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Cleanup after each test
 afterEach(() => {
   cleanup();
 });
-
-// Mock window.matchMedia for theme tests
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query) => ({
-import { vi } from 'vitest';
 
 // jsdom doesn't implement scrollIntoView
 Element.prototype.scrollIntoView = () => {};
@@ -38,7 +32,8 @@ const localStorageMock = {
   removeItem: vi.fn(),
   clear: vi.fn(),
 };
-global.localStorage = localStorageMock as any;
+global.localStorage = localStorageMock as unknown as Storage;
+
 // jsdom doesn't implement IntersectionObserver
 class IntersectionObserverMock {
   readonly root: Element | null = null;
