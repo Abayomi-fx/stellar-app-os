@@ -17,6 +17,9 @@ pub enum TreeRegistryError {
     InvalidSpeciesName = 90,
     BatchTooLarge = 88,
     BatchSizeMismatch = 89,
+    /// The tree registry has reached the maximum `u64` tree-id capacity and can
+    /// no longer mint new trees.
+    ContractFull = 91,
 }
 
 const ONE_YEAR_SECS: u64 = 31_536_000;
@@ -99,6 +102,16 @@ impl TreeRegistry {
             .instance()
             .get(&symbol_short!("TREECOUNT"))
             .unwrap_or(0);
+
+        // Edge case: the tree ID counter has reached its maximum value. The next
+        // (i.e. this) mint would overflow `u64`. Reject the attempt up front with
+        // a descriptive error instead of panicking on `count + 1`, and surface a
+        // `ContractFull` event so indexers can observe that the registry is full.
+        if count == u64::MAX {
+            env.events().publish((Symbol::new(&env, "ContractFull"), count), ());
+            panic_with_error!(&env, TreeRegistryError::ContractFull);
+        }
+
         let tree_id = count;
 
         let record = TreeRecord {
@@ -965,6 +978,40 @@ mod tests {
         let _id = client.mint_tree(&sponsor, &species, &region, &planter);
 
         assert!(env.events().all().len() > pre_events, "TreeMinted event should be published");
+    }
+
+    #[test]
+    fn test_mint_tree_rejects_at_u64_max() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, TreeRegistry);
+        let client = TreeRegistryClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let escrow = Address::generate(&env);
+        let sponsor = Address::generate(&env);
+        let planter = Address::generate(&env);
+
+        client.initialize(&admin, &escrow);
+
+        // Force the tree-id counter to its maximum value to exercise the edge case.
+        env.as_contract(&contract_id, || {
+            env.storage()
+                .instance()
+                .set(&symbol_short!("TREECOUNT"), &u64::MAX);
+        });
+
+        let species = String::from_str(&env, "Acacia");
+        let region = String::from_str(&env, "Kaduna");
+
+        // The mint must be rejected with the descriptive `ContractFull` error
+        // instead of panicking on a `u64` overflow.
+        let result = client.try_mint_tree(&sponsor, &species, &region, &planter);
+        assert_eq!(result, Err(Ok(TreeRegistryError::ContractFull)));
+
+        // The counter must remain untouched — no wrap / overflow occurred.
+        assert_eq!(client.tree_count(), u64::MAX);
     }
 
     #[test]
