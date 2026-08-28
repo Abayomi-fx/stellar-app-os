@@ -184,7 +184,7 @@ pub enum NftError {
     SelfTrade = 5,
     /// The seller does not own the token being traded.
     NotTokenOwner = 6,
-    TokenIsSoulbound = 4,
+    TokenIsSoulbound = 7,
 }
 
 #[contracterror]
