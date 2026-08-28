@@ -14,11 +14,16 @@ pub enum HarvestaError {
     NoPendingAdmin = 7,
     AmountMustBePositive = 9,
     TreeCountMustBePositive = 10,
+    VerifiedCountMustBePositive = 11,
+    VerifiedCountExceedsDonation = 12,
     InvalidPayoutAmount = 13,
     SlotAmountMustBePositive = 15,
     EscrowAlreadyExists = 16,
     EscrowNotFound = 17,
+    PlantingAlreadyVerified = 18,
+    PlantingNotVerified = 19,
     RefundAfterPlanting = 20,
+    ContractMustBeTreeTokenAdmin = 21,
     SurvivalRateOutOfRange = 22,
     SurvivalRateBelowMinimum = 23,
     SurvivalPeriodNotElapsed = 24,
@@ -153,6 +158,13 @@ pub enum HarvestaError {
     PolicySuperseded = 109,
     CannotCancelFinalised = 111,
     InvalidReplacementVersion = 112,
+
+    // ── Sponsor insurance (#1021) ─────────────────────────────────────────────
+    InsuranceNotActive = 113,
+    InsurancePeriodExpired = 114,
+    TreeNotDead = 115,
+    InsuranceAlreadyClaimed = 116,
+    InsuranceAlreadyPurchased = 117,
 }
 
 #[contracterror]
@@ -184,7 +196,7 @@ pub enum NftError {
     SelfTrade = 5,
     /// The seller does not own the token being traded.
     NotTokenOwner = 6,
-    TokenIsSoulbound = 4,
+    TokenIsSoulbound = 7,
 }
 
 #[contracterror]
