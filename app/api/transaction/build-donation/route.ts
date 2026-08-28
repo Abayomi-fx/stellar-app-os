@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as BuildDonationTransactionRequest & {
       regionId?: string;
       slippageTolerance?: number;
-      asset?: 'USDC' | 'XLM';
+      asset?: 'USDC' | 'USDT' | 'EURC' | 'XLM';
     };
 
     const {
@@ -41,9 +41,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (asset !== 'USDC' && asset !== 'XLM') {
+    if (!['USDC', 'USDT', 'EURC', 'XLM'].includes(asset)) {
       return NextResponse.json(
-        { error: 'Unsupported asset (expected USDC or XLM)' },
+        { error: 'Unsupported asset (expected USDC, USDT, EURC, or XLM)' },
         { status: 400 }
       );
     }
