@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { TreePine, Wind, Globe, Layers, Plus, ChevronRight } from 'lucide-react';
 import { SponsorTreeList } from '@/components/organisms/SponsorTreeList';
+import { SponsorImpactComparison } from '@/components/organisms/SponsorImpactComparison';
 import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/atoms/Button';
 import { Skeleton } from '@/components/atoms/Skeleton';
@@ -302,6 +303,23 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
             </div>
           </div>
         )}
+      </section>
+
+      {/* ===== IMPACT COMPARISON ===== */}
+      <section aria-labelledby="impact-comparison-heading">
+        <div className="mb-5 flex items-center justify-between">
+          <h2
+            id="impact-comparison-heading"
+            className="text-xl font-black tracking-tight text-foreground"
+          >
+            Impact Comparison
+          </h2>
+        </div>
+        <SponsorImpactComparison
+          sponsorCo2OffsetKg={stats.totalCO2}
+          sponsorTreeCount={totalCount}
+          isLoading={isLoading}
+        />
       </section>
 
       {/* ===== TREE CARD GRID ===== */}
