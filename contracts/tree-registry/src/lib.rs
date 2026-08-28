@@ -61,6 +61,15 @@ pub struct TreeRecord {
 }
 
 #[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlanterMetrics {
+    pub trees_completed: u64,
+    pub avg_completion_time: u64,
+    pub success_rate: u64,
+    pub current_bond_locked: i128,
+}
+
+#[contracttype]
 #[derive(Clone, Debug)]
 pub struct SpeciesInfo {
     pub co2_scaled: i128,
@@ -116,6 +125,12 @@ impl TreeRegistry {
 
         env.storage().persistent().set(&Self::tree_key(env, tree_id), &record);
         Self::extend_ttl(env, &Self::tree_key(env, tree_id));
+        Self::record_status(&env, tree_id, TreeStatus::Planted);
+
+        let mut planter_trees: Vec<u64> = env.storage().persistent().get(&Self::planter_key(&env, &planter)).unwrap_or_else(|| Vec::new(&env));
+        planter_trees.push_back(tree_id);
+        env.storage().persistent().set(&Self::planter_key(&env, &planter), &planter_trees);
+        Self::extend_ttl(&env, &Self::planter_key(&env, &planter));
 
         env.storage()
             .instance()
@@ -293,6 +308,7 @@ impl TreeRegistry {
 
         env.storage().persistent().set(&tree_key, &tree_record);
         Self::extend_ttl(env, &tree_key);
+        Self::record_status(&env, tree_id, tree_record.status.clone());
     }
 
     // ── Batch Survival Update ────────────────────────────────────────────────
@@ -475,11 +491,15 @@ impl TreeRegistry {
         }
 
         tree_record.milestone_claims |= flag;
-        if tree_record.milestone_claims == 0b111 {
+        let became_matured = tree_record.milestone_claims == 0b111;
+        if became_matured {
             tree_record.status = TreeStatus::Matured;
         }
 
         env.storage().persistent().set(&tree_key, &tree_record);
+        if became_matured {
+            Self::record_status(&env, tree_id, TreeStatus::Matured);
+        }
         Self::extend_ttl(env, &tree_key);
 
         // ── Dynamic CO₂ rate lookup ────────────────────────────────────────────
@@ -699,8 +719,77 @@ impl TreeRegistry {
             .unwrap_or(false)
     }
 
+    pub fn get_status_history(env: Env, tree_id: u64) -> Vec<(TreeStatus, u64)> {
+        if !env.storage().persistent().has(&Self::tree_key(&env, tree_id)) {
+            panic_with_error!(&env, TreeRegistryError::NotFound);
+        }
+        env.storage().persistent().get(&Self::status_history_key(&env, tree_id)).unwrap_or_else(|| Vec::new(&env))
+    }
+
+    pub fn get_planter_metrics(env: Env, wallet: Address) -> PlanterMetrics {
+        let tree_ids: Vec<u64> = env.storage().persistent().get(&Self::planter_key(&env, &wallet)).unwrap_or_else(|| Vec::new(&env));
+        let mut completed = 0u64;
+        let mut completion_total = 0u64;
+        let mut terminal = 0u64;
+        for id in tree_ids.iter() {
+            if let Some(tree) = env.storage().persistent().get::<_, TreeRecord>(&Self::tree_key(&env, id)) {
+                if tree.status == TreeStatus::Matured {
+                    completed += 1;
+                    if let Some(history) = env.storage().persistent().get::<_, Vec<(TreeStatus, u64)>>(&Self::status_history_key(&env, id)) {
+                        for index in 0..history.len() {
+                            if let Some((status, timestamp)) = history.get(index) {
+                                if status == TreeStatus::Matured {
+                                    completion_total += timestamp.saturating_sub(tree.planted_at);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if tree.status == TreeStatus::Matured || tree.status == TreeStatus::Rejected { terminal += 1; }
+            }
+        }
+        let current_bond_locked = env.storage().persistent().get(&Self::bond_key(&env, &wallet)).unwrap_or(0i128);
+        PlanterMetrics {
+            trees_completed: completed,
+            avg_completion_time: if completed == 0 { 0 } else { completion_total / completed },
+            success_rate: if terminal == 0 { 0 } else { completed * 100 / terminal },
+            current_bond_locked,
+        }
+    }
+
+    /// Set the planter's currently locked bond amount for escrow integrations.
+    pub fn set_planter_bond(env: Env, wallet: Address, amount: i128) {
+        Self::require_admin(&env);
+        if amount < 0 {
+            panic_with_error!(&env, TreeRegistryError::InvalidStatus);
+        }
+        env.storage().persistent().set(&Self::bond_key(&env, &wallet), &amount);
+        Self::extend_ttl(&env, &Self::bond_key(&env, &wallet));
+    }
+
     fn tree_key(env: &Env, id: u64) -> (Symbol, u64) {
         (symbol_short!("TREE"), id)
+    }
+
+    fn planter_key(env: &Env, planter: &Address) -> (Symbol, Address) {
+        (symbol_short!("PLANTER"), planter.clone())
+    }
+
+    fn status_history_key(env: &Env, id: u64) -> (Symbol, u64) {
+        (symbol_short!("HISTORY"), id)
+    }
+
+    fn bond_key(env: &Env, wallet: &Address) -> (Symbol, Address) {
+        (symbol_short!("BOND"), wallet.clone())
+    }
+
+    fn record_status(env: &Env, tree_id: u64, status: TreeStatus) {
+        let key = Self::status_history_key(env, tree_id);
+        let mut history: Vec<(TreeStatus, u64)> = env.storage().persistent().get(&key).unwrap_or_else(|| Vec::new(env));
+        history.push_back((status, env.ledger().timestamp()));
+        env.storage().persistent().set(&key, &history);
+        Self::extend_ttl(env, &key);
     }
 
     fn sponsor_key(env: &Env, sponsor: &Address) -> (Symbol, Address) {

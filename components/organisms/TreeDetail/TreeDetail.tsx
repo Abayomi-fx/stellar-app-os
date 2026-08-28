@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/molecules/Card';
 import type { Tree } from '@/lib/types/tree';
+import { TreeImage } from './TreeImage';
 
 interface TreeDetailProps {
   tree: Tree;
@@ -50,6 +51,12 @@ export function TreeDetail({ tree }: TreeDetailProps) {
           {tree.projectName}
         </Text>
       </header>
+
+      {tree.imageUrl ? (
+        <div className="mb-4 overflow-hidden rounded-xl border border-border bg-muted">
+          <TreeImage src={tree.imageUrl} alt={`Evidence photo for ${tree.treeId}`} />
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
