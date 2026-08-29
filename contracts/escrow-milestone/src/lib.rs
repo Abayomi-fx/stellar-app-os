@@ -2,7 +2,7 @@
 
 //!
 //! Flow:
-//!   1. Funder deposits XLM/token into escrow via `deposit()`
+//!   1. Funder deposits XLM, USDC, USDT, or EURC into escrow via `deposit()`
 //!   2. Verifier (oracle/admin) calls `verify_milestone()` after GPS + photo check
 //!   3. Contract instantly releases 75% to the farmer's Stellar wallet
 //!   4. After 6 months, verifier confirms survival rate >= 70%
@@ -107,13 +107,25 @@ pub struct EscrowMilestone;
 
 #[contractimpl]
 impl EscrowMilestone {
-    pub fn initialize(env: Env, admin: Address, amm: Address, xlm: Address, usdc: Address) {
+    pub fn initialize(
+        env: Env,
+        admin: Address,
+        amm: Address,
+        xlm: Address,
+        usdc: Address,
+        usdt: Address,
+        eurc: Address,
+    ) {
         if env.storage().instance().has(&symbol_short!("ADMIN")) {
             panic_with_error!(&env, HarvestaError::AlreadyInitialized);
         }
         env.storage()
             .instance()
             .set(&symbol_short!("ADMIN"), &(admin, amm, xlm, usdc));
+        contract_utils::add_to_whitelist(&env, &xlm);
+        contract_utils::add_to_whitelist(&env, &usdc);
+        contract_utils::add_to_whitelist(&env, &usdt);
+        contract_utils::add_to_whitelist(&env, &eurc);
     }
 
     /// Funder deposits `amount` of `token` into escrow for `farmer`.
@@ -133,7 +145,7 @@ impl EscrowMilestone {
     ///
     /// `recipient_wallet` - the address that will receive the benefits
     /// `farmer` - the farmer to plant the trees
-    /// `token` - the token to use for payment (XLM or USDC)
+    /// `token` - the token to use for payment (XLM, USDC, USDT, or EURC)
     /// `amount` - the total amount to deposit
     /// `arbiter` - the address authorised to adjudicate disputes
     pub fn sponsor_as_gift(
@@ -786,7 +798,7 @@ fn setup() -> Ctx {
         let amm = env.register_contract(None, MockAmm);
         let xlm = token.clone();
         let usdc = env.register_stellar_asset_contract_v2(admin.clone()).address();
-        client.initialize(&admin, &amm, &xlm, &usdc);
+        client.initialize(&admin, &amm, &xlm, &usdc, &usdc, &usdc);
         client.add_to_whitelist(&token);
         Ctx {
             env,
