@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Leaf, MapPin, TreePine, Wind } from 'lucide-react';
 import { Text } from '@/components/atoms/Text';
 import { TreeStatusBadge } from '@/components/molecules/TreeStatusBadge';
+import { TreeLifecycleTimeline } from '@/components/organisms/TreeLifecycleTimeline';
 import {
   Card,
   CardContent,
@@ -104,7 +105,7 @@ export function TreeDetail({ tree }: TreeDetailProps) {
             <CardTitle className="text-base">Planting timeline</CardTitle>
           </CardHeader>
           <CardContent>
-            <Text>{fmtDate(tree.plantedAt)}</Text>
+            <TreeLifecycleTimeline tree={tree} />
           </CardContent>
         </Card>
       </div>
