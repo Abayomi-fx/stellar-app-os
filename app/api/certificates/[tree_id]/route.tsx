@@ -276,7 +276,7 @@ export async function GET(
   const co2Tonnes = (co2KgTotal / 1000).toFixed(3);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.farmcredit.io';
-  const treeUrl = `${appUrl}/trees/${tree.id}`;
+  const treeUrl = `${appUrl}/trees/${tree.treeId}`;
 
   const qrDataUrl = await QRCode.toDataURL(treeUrl, { margin: 1, width: 200, type: 'image/png' });
 

@@ -11,7 +11,7 @@ export default function App() {
     // Dummy handler for taking/picking a photo
     setPhotoUri('https://picsum.photos/200/300');
     setSyncStatus(isOffline ? '1 item pending sync (Offline)' : 'Uploading...');
-    
+
     if (!isOffline) {
       setTimeout(() => setSyncStatus('Photo uploaded successfully!'), 1500);
     }
@@ -25,7 +25,7 @@ export default function App() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Planter App 🌱</Text>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Network Status</Text>
         <View style={styles.row}>
@@ -38,9 +38,7 @@ export default function App() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Photo Uploads</Text>
         <Button title="Take/Upload Photo" onPress={handleUploadPhoto} />
-        {photoUri && (
-          <Image source={{ uri: photoUri }} style={styles.image} />
-        )}
+        {photoUri && <Image source={{ uri: photoUri }} style={styles.image} />}
       </View>
 
       <View style={styles.section}>
