@@ -1,7 +1,6 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
-
+import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -14,5 +13,17 @@ export default defineConfig({
     exclude: ['node_modules', '.next', 'contracts'],
     environment: 'jsdom',
     pool: 'forks',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        '.next/',
+        'contracts/',
+        '**/*.config.{js,ts}',
+        '**/types/**',
+        'vitest.setup.ts',
+      ],
+    },
   },
 });

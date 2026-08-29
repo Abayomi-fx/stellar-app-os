@@ -9,38 +9,147 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 10, color: '#666' },
   title: { fontSize: 18, fontWeight: 'bold', marginTop: 15, marginBottom: 10, color: '#333' },
   summaryGrid: { flexDirection: 'row', gap: 10, marginBottom: 25 },
-  summaryCard: { flex: 1, backgroundColor: '#F0FDF4', padding: 15, borderRadius: 8, border: '1 solid #BBF7D0' },
-  summaryCardBlue: { flex: 1, backgroundColor: '#F0F9FF', padding: 15, borderRadius: 8, border: '1 solid #BAE6FD' },
-  summaryCardAmber: { flex: 1, backgroundColor: '#FFFBEB', padding: 15, borderRadius: 8, border: '1 solid #FDE68A' },
-  summaryCardPurple: { flex: 1, backgroundColor: '#FAF5FF', padding: 15, borderRadius: 8, border: '1 solid #E9D5FF' },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#F0FDF4',
+    padding: 15,
+    borderRadius: 8,
+    border: '1 solid #BBF7D0',
+  },
+  summaryCardBlue: {
+    flex: 1,
+    backgroundColor: '#F0F9FF',
+    padding: 15,
+    borderRadius: 8,
+    border: '1 solid #BAE6FD',
+  },
+  summaryCardAmber: {
+    flex: 1,
+    backgroundColor: '#FFFBEB',
+    padding: 15,
+    borderRadius: 8,
+    border: '1 solid #FDE68A',
+  },
+  summaryCardPurple: {
+    flex: 1,
+    backgroundColor: '#FAF5FF',
+    padding: 15,
+    borderRadius: 8,
+    border: '1 solid #E9D5FF',
+  },
   summaryValue: { fontSize: 24, fontWeight: 'bold', marginBottom: 3 },
-  summaryLabel: { fontSize: 9, color: '#666', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryLabel: {
+    fontSize: 9,
+    color: '#666',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 12, color: '#00b36b', borderBottom: '1 solid #E5E7EB', paddingBottom: 5 },
-  carbonBox: { backgroundColor: '#ECFDF5', padding: 18, borderRadius: 10, marginBottom: 20, textAlign: 'center', border: '1 solid #A7F3D0' },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#00b36b',
+    borderBottom: '1 solid #E5E7EB',
+    paddingBottom: 5,
+  },
+  carbonBox: {
+    backgroundColor: '#ECFDF5',
+    padding: 18,
+    borderRadius: 10,
+    marginBottom: 20,
+    textAlign: 'center',
+    border: '1 solid #A7F3D0',
+  },
   carbonValue: { fontSize: 32, fontWeight: 'bold', color: '#059669', marginBottom: 5 },
   carbonLabel: { fontSize: 11, color: '#065F46', fontWeight: 'bold' },
   carbonSubtext: { fontSize: 9, color: '#047857', marginTop: 5 },
   treeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  treeCard: { width: '48%', border: '1 solid #E5E7EB', borderRadius: 8, padding: 12, marginBottom: 10, backgroundColor: '#FAFAFA' },
-  treeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  speciesBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, fontSize: 9, fontWeight: 'bold', color: '#FFF' },
-  statusBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.3 },
-  treeIcon: { width: 60, height: 50, borderRadius: 6, textAlign: 'center', overflow: 'hidden', marginBottom: 10, justifyContent: 'center', alignItems: 'center' },
+  treeCard: {
+    width: '48%',
+    border: '1 solid #E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    backgroundColor: '#FAFAFA',
+  },
+  treeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  speciesBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    fontSize: 8,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  treeIcon: {
+    width: 60,
+    height: 50,
+    borderRadius: 6,
+    textAlign: 'center',
+    overflow: 'hidden',
+    marginBottom: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   treeIconText: { fontSize: 28, fontWeight: 'bold', color: '#FFF', opacity: 0.9 },
   treeId: { fontSize: 9, color: '#6B7280', fontWeight: 'bold', marginBottom: 3 },
   treeProject: { fontSize: 11, fontWeight: 'bold', color: '#111827', marginBottom: 6 },
-  treeDetail: { fontSize: 9, color: '#4B5563', marginBottom: 2, flexDirection: 'row', justifyContent: 'space-between' },
+  treeDetail: {
+    fontSize: 9,
+    color: '#4B5563',
+    marginBottom: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   detailLabel: { color: '#6B7280' },
   detailValue: { fontWeight: 'bold', color: '#111827' },
-  co2Row: { marginTop: 8, paddingTop: 8, borderTop: '1 solid #E5E7EB', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  co2Label: { fontSize: 8, color: '#059669', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.3 },
+  co2Row: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: '1 solid #E5E7EB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  co2Label: {
+    fontSize: 8,
+    color: '#059669',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   co2Value: { fontSize: 12, fontWeight: 'bold', color: '#059669' },
   speciesLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 8, color: '#4B5563' },
-  footer: { position: 'absolute', bottom: 30, left: 40, right: 40, textAlign: 'center', fontSize: 8, color: '#9CA3AF', borderTop: '1 solid #E5E7EB', paddingTop: 10 },
+  footer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 40,
+    right: 40,
+    textAlign: 'center',
+    fontSize: 8,
+    color: '#9CA3AF',
+    borderTop: '1 solid #E5E7EB',
+    paddingTop: 10,
+  },
 });
 
 const speciesColors: Partial<Record<TreeSpecies, string>> = {
@@ -108,9 +217,10 @@ export const ForestReportPDF: React.FC<ForestReportPDFProps> = ({
 }) => {
   const co2Display =
     totalCO2Kg >= 1000 ? `${(totalCO2Kg / 1000).toFixed(1)} tonnes` : `${totalCO2Kg.toFixed(0)} kg`;
-  const co2YearEquivalent = totalCO2Kg >= 1000
-    ? `Equivalent to taking ${Math.round((totalCO2Kg / 1000) / 0.000411).toLocaleString()} cars off the road for a year`
-    : `Equivalent to taking ${Math.round(totalCO2Kg / 0.411)} cars off the road for a day`;
+  const co2YearEquivalent =
+    totalCO2Kg >= 1000
+      ? `Equivalent to taking ${Math.round(totalCO2Kg / 1000 / 0.000411).toLocaleString()} cars off the road for a year`
+      : `Equivalent to taking ${Math.round(totalCO2Kg / 0.411)} cars off the road for a day`;
 
   const uniqueSpecies = Array.from(new Set(trees.map((t) => t.species)));
 
@@ -174,7 +284,8 @@ export const ForestReportPDF: React.FC<ForestReportPDFProps> = ({
             {trees.map((tree) => {
               const speciesColor = speciesColors[tree.species] ?? '#94a3b8';
               const statusStyle = statusColors[tree.status];
-              const initials = speciesInitials[tree.species] ?? tree.species.slice(0, 2).toUpperCase();
+              const initials =
+                speciesInitials[tree.species] ?? tree.species.slice(0, 2).toUpperCase();
               const plantedDate = tree.plantedAt
                 ? new Date(tree.plantedAt).toLocaleDateString('en-GB', {
                     day: 'numeric',
@@ -206,12 +317,7 @@ export const ForestReportPDF: React.FC<ForestReportPDFProps> = ({
 
                   <View style={styles.treeDetail}>
                     <Text style={styles.detailLabel}>Species:</Text>
-                    <View
-                      style={[
-                        styles.speciesBadge,
-                        { backgroundColor: speciesColor },
-                      ]}
-                    >
+                    <View style={[styles.speciesBadge, { backgroundColor: speciesColor }]}>
                       <Text>{tree.species}</Text>
                     </View>
                   </View>
