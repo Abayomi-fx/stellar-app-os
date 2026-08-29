@@ -154,7 +154,7 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
           regionCount={stats.regionCount}
           activeCount={stats.activeCount}
           generatedDate={generatedDate}
-        />,
+        />
       ).toBlob();
 
       const url = URL.createObjectURL(blob);

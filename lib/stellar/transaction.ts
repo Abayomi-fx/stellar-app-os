@@ -12,7 +12,6 @@ import { getTreeAsset } from './tree-asset';
 import { DEFAULT_CONVERSION_SLIPPAGE, computeSendMax, getXlmPerUsdcRate } from './conversion';
 import type { DonationAsset } from '@/lib/types/donation-payment';
 import { getRegionPlanterAddresses } from './region-pools';
-import logger from '@/lib/logger';
 
 // Re-export so callers can import TREE asset helper from this module
 export { getTreeAsset };
@@ -205,13 +204,15 @@ export async function buildDonationTransaction(
   slippageTolerance: number = DEFAULT_CONVERSION_SLIPPAGE,
   regionId?: string
 ): Promise<DonationTransactionResult> {
+  const normalizedAsset = asset.toUpperCase() as DonationAsset;
+  const normalizedRegionId = regionId?.trim() || undefined;
+
   if (amount <= 0) {
     throw new Error('Donation amount must be greater than zero');
   }
   if (treeCount < 1 || treeCount > MAX_BATCH_TREES) {
     throw new Error(`Tree count must be between 1 and ${MAX_BATCH_TREES}`);
   }
-  const normalizedAsset = asset.toUpperCase() as DonationAsset;
   if (!['USDC', 'USDT', 'EURC', 'XLM'].includes(normalizedAsset)) {
     throw new Error(`Unsupported donation asset: ${asset}`);
   }
@@ -227,7 +228,7 @@ export async function buildDonationTransaction(
   });
 
   let estimatedSourceAmount: string;
-  const regionPlanterAddresses = getRegionPlanterAddresses(regionId);
+  const regionPlanterAddresses = getRegionPlanterAddresses(normalizedRegionId);
 
   if (normalizedAsset !== 'XLM') {
     const paymentAsset = getDonationPaymentAsset(normalizedAsset, network);
@@ -337,7 +338,7 @@ export async function buildDonationTransaction(
     .setTimeout(300)
     .build();
 
-  logger.info('[stellar] Built donation transaction', {
+  console.info('[stellar] Built donation transaction', {
     sourcePublicKey,
     treeCount,
     asset: normalizedAsset,
@@ -427,7 +428,7 @@ export async function buildBulkPurchaseTransaction(
     .setTimeout(300)
     .build();
 
-  logger.info('[stellar] Built bulk purchase transaction', {
+  console.info('[stellar] Built bulk purchase transaction', {
     projectId,
     quantity,
     buyerPublicKey,

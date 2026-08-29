@@ -134,7 +134,11 @@ export function StellarPaymentSection({
         <Text variant="small" className="font-medium mb-2">
           Pay with
         </Text>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="radiogroup" aria-label="Donation asset">
+        <div
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+          role="radiogroup"
+          aria-label="Donation asset"
+        >
           {(['USDC', 'USDT', 'EURC', 'XLM'] as const).map((option) => (
             <button
               key={option}
