@@ -3,7 +3,7 @@
 import { type JSX, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu } from 'lucide-react';
+import { Menu, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Text } from '@/components/atoms/Text';
 import { MobileDrawer } from '@/components/organisms/Header/MobileDrawer';
@@ -15,6 +15,7 @@ import { useWalletContext } from '@/contexts/WalletContext';
 import { useAppTranslation } from '@/hooks/useTranslation';
 import { CompactThemeSwitcher } from '@/components/molecules/ThemeSwitcher/ThemeSwitcher';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/useTheme';
 
 const NAV_LINKS = [
   { href: '/', label: 'nav.home' },
