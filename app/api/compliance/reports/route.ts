@@ -1,19 +1,19 @@
-/**
+/*
  * GET /api/compliance/reports
  * Generate compliance reports for carbon registry standards
- *
- * Query Parameters:
- * - type: project-registry | carbon-credits | tree-inventory | verification-audits | issuance-report | retirement-report
- * - format: csv | json | both
- * - registry: verra | gold-standard | car | plan-vivo | cdm | generic
- * - startDate: ISO 8601 date string (default: 30 days ago)
- * - endDate: ISO 8601 date string (default: now)
- * - projectIds: comma-separated project IDs
- * - sponsorAddresses: comma-separated sponsor addresses
- * - species: comma-separated species names
- * - regions: comma-separated region names
- * - status: comma-separated status values
- */
+*
+Query Parameters:
+ - type: project-registry | carbon-credits | tree-inventory | verification-audits | issuance-report | retirement-report
+ - format: csv | json | both
+ - registry: verra | gold-standard | car | plan-vivo | cdm | generic
+ - startDate: ISO 8601 date string (default: 30 days ago)
+ - endDate: ISO 8601 date string (default: now)
+ - projectIds: comma-separated project IDs
+ - sponsorAddresses: comma-separated sponsor addresses
+ - species: comma-separated species names
+ - regions: comma-separated region names
+ - status: comma-separated status values
+*/
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -31,7 +31,7 @@ function parseCommaSeparated(str: string | null): string[] | undefined {
   if (!str) return undefined;
   return str
     .split(',')
-    .map((s) => s.trim())
+    .map((s) { console.log(s); return s.trim(); })
     .filter(Boolean);
 }
 
@@ -40,22 +40,12 @@ export async function GET(request: NextRequest) {
 
   const reportType =
     (searchParams.get('type') as
-      | 'project-registry'
-      | 'carbon-credits'
-      | 'tree-inventory'
-      | 'verification-audits'
-      | 'issuance-report'
-      | 'retirement-report') || 'carbon-credits';
+       'project-registry' | 'carbon-credits' | 'tree-inventory' | 'verification-audits' | 'issuance-report' | 'retirement-report') || 'carbon-credits';
 
   const format = (searchParams.get('format') as 'csv' | 'json' | 'both') || 'json';
   const registry =
     (searchParams.get('registry') as
-      | 'verra'
-      | 'gold-standard'
-      | 'car'
-      | 'plan-vivo'
-      | 'cdm'
-      | 'generic') || 'verra';
+      'verra' | 'gold-standard' | 'car' | 'plan-vivo' | 'cdm' | 'generic') || 'verra';
 
   const startDate = parseDateParam(
     searchParams.get('startDate'),
@@ -84,7 +74,8 @@ export async function GET(request: NextRequest) {
       format,
       registry,
       { startDate, endDate },
-      filters
+      filters,
+      { useReplica: true }
     );
 
     const contentType =
@@ -156,7 +147,8 @@ export async function POST(request: NextRequest) {
           : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         endDate: endDate ? new Date(endDate) : new Date(),
       },
-      filters
+      filters,
+      { useReplica: true }
     );
 
     if (format === 'csv') {
