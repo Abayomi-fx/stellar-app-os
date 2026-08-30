@@ -33,6 +33,7 @@ members = [
     "tree-registry",
     "verifier-staking",
     "species-catalog",
+    "upgrade-timelock",
     "leaderboard",
 ]
 resolver = "2"
