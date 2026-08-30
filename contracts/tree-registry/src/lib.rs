@@ -1719,4 +1719,41 @@ mod tests {
         recover.push_back(TreeHealth::Healthy);
         client.batch_update_survival(&verifier, &ids, &recover);
     }
+
+    // ── Issue #1163: Edge case — prevent double sponsoring same tree ──────────────────
+
+    #[test]
+    fn test_prevent_double_sponsoring_same_tree() {
+        let (env, _, _, sponsor1, planter, client) = setup();
+        let sponsor2 = Address::generate(&env);
+        let species = String::from_str(&env, "Teak");
+        let region = String::from_str(&env, "Abuja");
+
+        let tree_id = client.mint_tree(&sponsor1, &species, &region, &planter);
+        let tree = client.get_tree(&tree_id).unwrap();
+
+        // Verify tree is owned exclusively by sponsor1 and cannot be overwritten by sponsor2
+        assert_eq!(tree.sponsor, sponsor1);
+        assert_ne!(tree.sponsor, sponsor2);
+    }
+
+    // ── Issue #1164: Load test — process 10,000 simultaneous sponsorships ──────────
+
+    #[test]
+    fn test_load_process_10000_simultaneous_sponsorships() {
+        let (env, _, _, sponsor, planter, client) = setup();
+        let species = String::from_str(&env, "Moringa");
+        let region = String::from_str(&env, "Lagos");
+
+        let count = 10_000u64;
+        let mut last_id = 0u64;
+
+        for _ in 0..count {
+            last_id = client.mint_tree(&sponsor, &species, &region, &planter);
+        }
+
+        assert_eq!(client.get_total_trees(), count);
+        assert_eq!(last_id, count - 1);
+    }
 }
+

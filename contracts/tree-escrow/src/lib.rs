@@ -1081,4 +1081,55 @@ mod tests {
 
         ctx.client.report_dead_tree(&ctx.farmer);
     }
+
+    // ── Issue #1165: Invariant — total XLM locked equals sum of all sponsorships ──
+
+    #[test]
+    fn test_invariant_total_xlm_locked_equals_sum_of_sponsorships() {
+        let ctx = setup();
+        let amount1 = 10_000i128;
+        let amount2 = 25_000i128;
+        let farmer1 = Address::generate(&ctx.env);
+        let farmer2 = Address::generate(&ctx.env);
+
+        token::StellarAssetClient::new(&ctx.env, &ctx.token).mint(&ctx.donor, &(amount1 + amount2));
+
+        ctx.client.deposit(&ctx.donor, &farmer1, &ctx.token, &amount1, &5);
+        ctx.client.deposit(&ctx.donor, &farmer2, &ctx.token, &amount2, &10);
+
+        let total_locked = bal(&ctx.env, &ctx.token, &ctx.client.address);
+        assert_eq!(total_locked, amount1 + amount2);
+    }
+
+    // ── Issue #1164: Load test — process 10,000 simultaneous sponsorships ──────────
+
+    #[test]
+    fn test_load_process_10000_simultaneous_sponsorships() {
+        let ctx = setup();
+        let count = 10_000u32;
+        let single_amount = 1_000i128;
+        let total_amount = single_amount * (count as i128);
+
+        token::StellarAssetClient::new(&ctx.env, &ctx.token).mint(&ctx.donor, &total_amount);
+
+        for _ in 0..count {
+            let farmer = Address::generate(&ctx.env);
+            ctx.client.deposit(&ctx.donor, &farmer, &ctx.token, &single_amount, &1);
+        }
+
+        let total_locked = bal(&ctx.env, &ctx.token, &ctx.client.address);
+        assert_eq!(total_locked, total_amount);
+    }
+
+    // ── Issue #1163: Edge case — prevent double sponsoring same tree ──────────────────
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #16)")]
+    fn test_prevent_double_sponsoring_same_tree() {
+        let ctx = setup();
+        ctx.client.deposit(&ctx.donor, &ctx.farmer, &ctx.token, &5_000, &2);
+        // Attempting to deposit for the same tree/farmer escrow record fails
+        ctx.client.deposit(&ctx.donor, &ctx.farmer, &ctx.token, &5_000, &2);
+    }
 }
+
