@@ -23,6 +23,9 @@ Migrations are numbered sequentially and should be named in the format: `XXX_des
 - `008_create_carbon_offset_snapshots.sql` - Stores daily snapshots of total CO₂ sequestered across active trees (see `docs/carbon-offset-cron.md`)
 - `009_create_referral_rewards.sql` - Stores referral codes, first-tree eligibility, and queued XLM rewards
 - `010_create_sponsor_teams.sql` - Stores sponsor teams, invite membership, and shared tree links
+- `011_create_sponsor_cohort_retention.sql` - Stores sponsor cohort data, sponsorship events, and monthly retention snapshots (#993)
+- `012_create_school_partnerships.sql` - Stores school partnerships, student memberships, class project batches, and contributions (#1149)
+- `013_create_daily_challenges.sql` - Stores daily challenge templates, sponsor progress, rewards, and streaks (#1158)
 
 ## Running Migrations
 
