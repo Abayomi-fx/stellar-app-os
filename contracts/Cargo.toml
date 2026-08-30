@@ -30,9 +30,12 @@ members = [
     "nft-certificate",
     "sponsor-receipt",
     "carbon-marketplace",
+    "carbon-dex",
     "tree-registry",
     "verifier-staking",
-    "public-seal",
+    "species-catalog",
+    "upgrade-timelock",
+    "leaderboard",
 ]
 resolver = "2"
 
