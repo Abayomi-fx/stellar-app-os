@@ -223,8 +223,9 @@ impl SubscriptionSponsorship {
         rec.total_amount_spent += rec.amount_per_cycle;
         rec.total_trees_sponsored += rec.trees_per_cycle;
 
-        // Check sponsor balance before attempting to lock the next cycle amount.
-        // If insufficient, cancel the subscription gracefully rather than panicking.
+        // Try to lock the next cycle's amount from the sponsor.
+        // If the sponsor has insufficient balance, cancel the subscription
+        // gracefully rather than panicking.
         let sponsor_balance = token::Client::new(&env, &rec.token).balance(&rec.sponsor);
         if sponsor_balance >= rec.amount_per_cycle {
             token::Client::new(&env, &rec.token).transfer(
@@ -233,7 +234,9 @@ impl SubscriptionSponsorship {
                 &rec.amount_per_cycle,
             );
             rec.next_processing = now + rec.interval_seconds;
+            // Keep status as Active
         } else {
+            // Sponsor doesn't have enough funds — cancel gracefully
             rec.status = SubscriptionStatus::Cancelled;
             env.events().publish(
                 (symbol_short!("sub"), symbol_short!("cancel")),
@@ -375,7 +378,7 @@ mod tests {
         SubscriptionSponsorshipClient<'static>,
     ) {
         let env = Env::default();
-        env.mock_all_auths_allowing_non_root_auth();
+        env.mock_all_auths();
 
         let contract_id = env.register_contract(None, SubscriptionSponsorship);
         let client = SubscriptionSponsorshipClient::new(&env, &contract_id);
@@ -432,7 +435,7 @@ mod tests {
 
         let balance_before = token::Client::new(&env, &xlm).balance(&sponsor);
         let contract_balance_before =
-            token::Client::new(&env, &xlm).balance(&client.address);
+            token::Client::new(&env, &xlm).balance(&env.current_contract_address());
 
         let amount: i128 = 1_000;
         let trees: u32 = 1;
@@ -441,7 +444,7 @@ mod tests {
 
         let balance_after = token::Client::new(&env, &xlm).balance(&sponsor);
         let contract_balance_after =
-            token::Client::new(&env, &xlm).balance(&client.address);
+            token::Client::new(&env, &xlm).balance(&env.current_contract_address());
 
         // Sponsor paid amount_per_cycle
         assert_eq!(balance_before - balance_after, amount);
@@ -644,7 +647,7 @@ mod tests {
         let id = client.setup(&sponsor, &farmer, &xlm, &amount, &1, &MONTHLY_INTERVAL);
 
         let balance_before = token::Client::new(&env, &xlm).balance(&sponsor);
-        let contract_before = token::Client::new(&env, &xlm).balance(&client.address);
+        let contract_before = token::Client::new(&env, &xlm).balance(&env.current_contract_address());
 
         client.cancel(&sponsor, &id);
 
@@ -654,7 +657,7 @@ mod tests {
             amount
         );
         assert_eq!(
-            contract_before - token::Client::new(&env, &xlm).balance(&client.address),
+            contract_before - token::Client::new(&env, &xlm).balance(&env.current_contract_address()),
             amount
         );
 

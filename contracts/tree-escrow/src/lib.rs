@@ -47,6 +47,7 @@ const INSURANCE_FEE_BPS: u32 = 200;
 pub enum EscrowStatus {
     Funded,
     Planted,
+    Survived,
     Completed,
     Refunded,
     Survived,
@@ -58,13 +59,16 @@ pub enum EscrowStatus {
 #[derive(Clone, Debug)]
 pub struct EscrowRecord {
     pub donor: Address,
+    pub gift_recipient: Option<Address>,
     pub farmer: Address,
     pub token: Address,
     pub total_amount: i128,
     pub tree_count: i128,
+    pub area_hectares: i128,
     pub verified_tree_count: i128,
     pub tree_tokens_minted: i128,
     pub released: i128,
+    pub progress_updates: u32,
     pub status: EscrowStatus,
     pub planted_at: u64,
     pub planting_proof: BytesN<32>,
@@ -316,6 +320,41 @@ impl TreeEscrow {
         token: Address,
         amount: i128,
         tree_count: i128,
+        area_hectares: i128,
+    ) {
+        Self::deposit_internal(env, donor, None, farmer, token, amount, tree_count, area_hectares);
+    }
+
+    /// Sponsor trees as a gift - NFT receipt and carbon credits go to a different recipient address.
+    ///
+    /// `recipient_wallet` - the address that will receive the TREE tokens (NFT receipt and carbon credits)
+    /// `farmer` - the farmer to plant the trees
+    /// `token` - the token to use for payment (XLM or USDC)
+    /// `amount` - the total amount to deposit
+    /// `tree_count` - the maximum number of trees covered by this donation
+    /// `area_hectares` - planting area in hectares
+    pub fn sponsor_as_gift(
+        env: Env,
+        donor: Address,
+        recipient_wallet: Address,
+        farmer: Address,
+        token: Address,
+        amount: i128,
+        tree_count: i128,
+        area_hectares: i128,
+    ) {
+        Self::deposit_internal(env, donor, Some(recipient_wallet), farmer, token, amount, tree_count, area_hectares);
+    }
+
+    fn deposit_internal(
+        env: Env,
+        donor: Address,
+        gift_recipient: Option<Address>,
+        farmer: Address,
+        token: Address,
+        amount: i128,
+        tree_count: i128,
+        area_hectares: i128,
     ) {
         Self::deposit_internal(env, donor, farmer, token, amount, tree_count, false);
     }
@@ -993,6 +1032,7 @@ mod tests {
         ctx.env.ledger().set_timestamp(SIX_MONTHS_SECS + 1);
         ctx.client.verify_survival(&ctx.farmer, &proof(&ctx.env, 2), &90);
 
+        let tree_unit = 10i128.pow(token::Client::new(&ctx.env, &ctx.tree_token).decimals());
         let rec = ctx.client.get_record(&ctx.farmer).unwrap();
         assert_eq!(rec.status, EscrowStatus::Completed);
         assert_eq!(rec.released, 10_000);
@@ -1029,6 +1069,8 @@ mod tests {
         assert_eq!(expires_at, rec.deposit_time + ONE_YEAR_SECS);
         assert!(is_active);
     }
+
+    // ── Oracle survival reports (#394) ────────────────────────────────────────
 
     #[test]
     fn test_report_dead_tree_refunds_insured_donor_full_amount() {
