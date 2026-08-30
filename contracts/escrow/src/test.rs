@@ -133,3 +133,74 @@ impl MockTreeRegistry {
         1u64
     }
 }
+
+// ── Issue #1163: Edge case — prevent double sponsoring same tree ──────────────────
+
+#[test]
+#[should_panic(expected = "EscrowAlreadyFunded")]
+fn test_prevent_double_sponsoring_same_tree() {
+    let (env, tree_registry, planter_registry, sponsor, token_id, token_client) = setup();
+    let escrow = create_escrow_contract(&env);
+    escrow.initialize(&tree_registry, &planter_registry);
+    env.register_contract(&planter_registry, MockPlanterRegistry);
+    env.register_contract(&tree_registry, MockTreeRegistry);
+    let amount = 50_0000000i128;
+    token_client.approve(&sponsor, &escrow.address, &(amount * 2), &999999);
+    
+    let planter = Address::generate(&env);
+    escrow.deposit(&sponsor, &planter, &101u64, &token_id, &amount);
+
+    // Second sponsor attempting to deposit for physical tree_id 101 must fail
+    let sponsor2 = Address::generate(&env);
+    token_client.mint(&sponsor2, &amount);
+    token_client.approve(&sponsor2, &escrow.address, &amount, &999999);
+    escrow.deposit(&sponsor2, &planter, &101u64, &token_id, &amount);
+}
+
+// ── Issue #1165: Invariant — total XLM locked equals sum of all sponsorships ──
+
+#[test]
+fn test_invariant_total_xlm_locked_equals_sum_of_sponsorships() {
+    let (env, tree_registry, planter_registry, sponsor, token_id, token_client) = setup();
+    let escrow = create_escrow_contract(&env);
+    escrow.initialize(&tree_registry, &planter_registry);
+
+    let amount1 = 10_0000000i128;
+    let amount2 = 25_0000000i128;
+    let amount3 = 50_0000000i128;
+
+    let planter = Address::generate(&env);
+    token_client.approve(&sponsor, &escrow.address, &(amount1 + amount2 + amount3), &999999);
+
+    escrow.deposit(&sponsor, &planter, &1u64, &token_id, &amount1);
+    escrow.deposit(&sponsor, &planter, &2u64, &token_id, &amount2);
+    escrow.deposit(&sponsor, &planter, &3u64, &token_id, &amount3);
+
+    let expected_sum = amount1 + amount2 + amount3;
+    let escrow_balance = token_client.balance(&escrow.address);
+    assert_eq!(escrow_balance, expected_sum);
+}
+
+// ── Issue #1164: Load test — process 10,000 simultaneous sponsorships ──────────
+
+#[test]
+fn test_load_process_10000_simultaneous_sponsorships() {
+    let (env, tree_registry, planter_registry, sponsor, token_id, token_client) = setup();
+    let escrow = create_escrow_contract(&env);
+    escrow.initialize(&tree_registry, &planter_registry);
+
+    let amount = 1_0000000i128;
+    let count = 10_000u64;
+    let total_amount = amount * (count as i128);
+
+    token_client.mint(&sponsor, &total_amount);
+    token_client.approve(&sponsor, &escrow.address, &total_amount, &999999);
+
+    let planter = Address::generate(&env);
+    for id in 1..=count {
+        escrow.deposit(&sponsor, &planter, &id, &token_id, &amount);
+    }
+
+    let escrow_balance = token_client.balance(&escrow.address);
+    assert_eq!(escrow_balance, total_amount);
+}

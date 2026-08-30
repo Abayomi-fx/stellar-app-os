@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  checkRegionCoverage,
-  containsPointInPolygon,
-  normalizeLng,
-  lngDelta,
-} from './polygon';
+import { checkRegionCoverage, containsPointInPolygon, normalizeLng, lngDelta } from './polygon';
 
 describe('normalizeLng', () => {
   it('normalizes longitudes within range', () => {
@@ -98,24 +93,24 @@ describe('checkRegionCoverage', () => {
 
   it('matches Fiji region crossing the date line', () => {
     // Inside Fiji
-    expect(
-      checkRegionCoverage({ latitude: -18.1, longitude: 178.4, regionCode: 'fiji' })
-    ).toBe(true);
+    expect(checkRegionCoverage({ latitude: -18.1, longitude: 178.4, regionCode: 'fiji' })).toBe(
+      true
+    );
     // Outside Fiji
-    expect(
-      checkRegionCoverage({ latitude: -33.9, longitude: 151.2, regionCode: 'fiji' })
-    ).toBe(false);
+    expect(checkRegionCoverage({ latitude: -33.9, longitude: 151.2, regionCode: 'fiji' })).toBe(
+      false
+    );
   });
 
   it('matches Tonga region', () => {
-    expect(
-      checkRegionCoverage({ latitude: -21.2, longitude: -175.2, regionCode: 'tonga' })
-    ).toBe(true);
+    expect(checkRegionCoverage({ latitude: -21.2, longitude: -175.2, regionCode: 'tonga' })).toBe(
+      true
+    );
   });
 
   it('matches Samoa region', () => {
-    expect(
-      checkRegionCoverage({ latitude: -13.8, longitude: -172.0, regionCode: 'samoa' })
-    ).toBe(true);
+    expect(checkRegionCoverage({ latitude: -13.8, longitude: -172.0, regionCode: 'samoa' })).toBe(
+      true
+    );
   });
 });

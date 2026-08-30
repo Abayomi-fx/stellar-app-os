@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { pdf } from '@react-pdf/renderer';
 import { TreePine, Wind, Globe, Layers, Plus, ChevronRight, Download } from 'lucide-react';
 import { SponsorTreeList } from '@/components/organisms/SponsorTreeList';
+import { TeamForestPanel } from '@/components/organisms/TeamForestPanel';
 import { ForestReportPDF } from './ForestReportPDF';
 import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/atoms/Button';
@@ -154,7 +155,7 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
           regionCount={stats.regionCount}
           activeCount={stats.activeCount}
           generatedDate={generatedDate}
-        />,
+        />
       ).toBlob();
 
       const url = URL.createObjectURL(blob);
@@ -356,6 +357,8 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
           </div>
         )}
       </section>
+
+      <TeamForestPanel />
 
       {/* ===== TREE CARD GRID ===== */}
       <section aria-labelledby="forest-grid-heading">

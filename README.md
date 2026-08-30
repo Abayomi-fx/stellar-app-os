@@ -327,6 +327,50 @@ npm start
 4. Test offline: DevTools → Network → Offline
 5. Run Lighthouse audit for PWA score
 
+## White-Label Integration for Enterprises
+
+Enterprises can deploy FarmCredit as a fully white-labelled sponsorship program. The platform is designed for custom branding, custom domains, and seamless integration into existing corporate sustainability initiatives.
+
+### Getting Started
+
+1. **Fork the repository** and set up your own CI/CD pipeline (see `.github/workflows` for examples).
+2. **Configure environment variables** in `.env.local` (copy from `.env.example`):
+   - `NEXT_PUBLIC_APP_NAME` — your corporate program name (e.g., "Acme Carbon Fund")
+   - `NEXT_PUBLIC_BRAND_COLOR` — your primary brand color (hex value)
+   - `NEXT_PUBLIC_CONTACT_EMAIL` — support contact for the program
+   - `STELLAR_NETWORK` — set to `testnet` or `mainnet`
+3. **Deploy the smart contracts** to your Stellar network of choice (see "Build Contracts" above).
+4. **Configure the backend** (if used) to point to your contract IDs and database.
+5. **Customize UI assets** — replace logos, favicons, and copy in `app/` and `components/` to match your brand.
+6. **Deploy to production** using Vercel, Netlify, or your preferred Node host.
+
+### Custom Domain
+
+Add the domain to your hosting provider and update the environment variable `NEXT_PUBLIC_SITE_URL` to enable canonical URLs and redirects.
+
+### API Integration
+
+FarmCredit exposes a REST API under `/api` for programmatic access. Key endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sponsorships` | GET | List all sponsorships |
+| `/api/sponsorships` | POST | Create a new sponsorship |
+| `/api/planters` | GET | List registered planters |
+| `/api/trees` | GET | List tree IDs and status |
+
+Use the API to embed sponsorship functionality directly into your existing corporate portal.
+
+### Whitelabel Metrics
+
+Once embedded, your enterprise dashboard can show live KPIs:
+- Total trees sponsored
+- CO₂ offset (kg)
+- Active planters
+- Funds in escrow
+
+Contact [enterprise@farmcredit.io](mailto:enterprise@farmcredit.io) for dedicated support and SLAs.
+
 ## Project Architecture
 
 > 📖 **Full System Architecture**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for the high-level architecture diagram and data flows across smart contracts, frontend, backend, and IPFS.
