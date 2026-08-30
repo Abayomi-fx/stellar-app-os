@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTreeRegistryAnalytics, QueryFilter } from '@/lib/graphql/resolvers';
 import { typeDefs } from '@/lib/graphql/schema';
+import { prisma } from '@/lib/prisma';
 
 interface GraphQLRequestBody {
   query?: string;
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     if (!query) {
       return NextResponse.json(
-        { errors: [{ message: 'Must provide query string.' }] },
+        { errors: { message: 'Must provide query string.' } },
         { status: 400 }
       );
     }
@@ -35,6 +36,32 @@ export async function POST(req: NextRequest) {
           },
         },
       });
+    }
+
+    // GDPR: User data export (DSAR)
+    if (query.includes('exportUserData')) {
+      const userId = variables?.userId as string;
+      if (!userId) {
+        return NextResponse.json(
+          { errors: [ { message: 'userId is required for exportUserData.' } ] },
+          { status: 400 }
+        );
+      }
+      const exportedData = await handleExportUserData(userId);
+      return NextResponse.json({ data: { exportUserData: exportedData } });
+    }
+
+    // GDPR: Right to be forgotten
+    if (query.includes('deleteUserData')) {
+      const userId = variables?.userId as string;
+      if (!userId) {
+        return NextResponse.json(
+          { errors: [ { message: 'userId is required for deleteUserData.' } ] },
+          { status: 400 }
+        );
+      }
+      const deletionResult = await handleDeleteUserData(userId);
+      return NextResponse.json({ data: { deleteUserData: deletionResult } });
     }
 
     // Extract filters from query or variables
@@ -127,8 +154,51 @@ export async function GET(req: NextRequest) {
   }
 }
 
+async function handleExportUserData(userId: string) {
+  if (!userId) throw new Error('userId is required for exportUserData.');
+  const db = prisma as any;
+
+  // Fetch the user record
+  const user = await db.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new Error(`User with id ${userId} not found.`);
+  }
+
+  // Fetch related personal data (adjust these model names to match your schema)
+  const [sponsorships, activities] = await Promise.all([
+    db.sponsorship.findMany({ where: { userId } }),
+    db.activity.findMany({ where: { userId } }),
+  ]);
+
+  return {
+    user,
+    sponsorships,
+    activities,
+  };
+}
+
+async function handleDeleteUserData(userId: string) {
+  if (!userId) throw new Error('userId is required for deleteUserData.');
+  const db = prisma as any;
+
+  // Delete all associated data and the user in a transaction.
+  await db.$transaction([
+    db.sponsorship.deleteMany({ where: { userId } }),
+    db.activity.deleteMany({ where: { userId } }),
+    db.user.delete({ where: { id: userId } }),
+  ]);
+
+  return {
+    success: true,
+    deletedUserId: userId,
+  };
+}
+
 function extractQueryParam(queryStr: string, paramName: string): string | undefined {
-  const regex = new RegExp(`${paramName}\\s*:\\s*"([^"]+)"`);
+  const regex = new RegExp(`${paramName}\s*:\s*$"[^"]+"`);
   const match = queryStr.match(regex);
   return match ? match[1] : undefined;
 }
