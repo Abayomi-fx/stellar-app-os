@@ -15,7 +15,6 @@
 //! - Quorum: 10% of total staked tokens required for proposal validity
 //! - Timelock: 48h after vote closes before execution
 //! - Successful proposals can be executed to update platform parameters
-//! - Liquid democracy: users may delegate their voting power to a registered delegate
 //!
 //! # Storage layout
 //!   Instance:
@@ -74,7 +73,6 @@ pub enum ProposalType {
     PlatformFee,
     MinPlantingBond,
     VerifierWhitelist,
-    SpeciesSelection,
 }
 
 /// Proposal status lifecycle
@@ -146,7 +144,7 @@ pub struct VoteRecord {
     pub voter: Address,
     /// Option ID voted for
     pub option_id: u32,
-    /// Voting power (own staked balance + delegated power at time of vote)
+    /// Voting power (staked token balance at time of vote)
     pub power: i128,
     /// Timestamp of vote
     pub voted_at: u64,
@@ -303,14 +301,18 @@ fn delegate_info_key(delegate: &Address) -> (Symbol, Address) {
     (symbol_short!("DLGT"), delegate.clone())
 }
 
-/// Key for storing which delegate address a given delegator has chosen.
-fn delegation_key(delegator: &Address) -> (Symbol, Address) {
-    (symbol_short!("DLGN"), delegator.clone())
-}
-
-/// Key for storing the list of delegators that have delegated to a delegate.
-fn delegators_key(delegate: &Address) -> (Symbol, Address) {
-    (symbol_short!("DLGRS"), delegate.clone())
+/// Record of a proposal queued for timelock execution.
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct QueuedProposal {
+    /// Unique proposal ID
+    pub proposal_id: u64,
+    /// Timestamp when the proposal was queued
+    pub queued_at: u64,
+    /// Earliest execution timestamp (after timelock)
+    pub executable_at: u64,
+    /// True if the queued proposal was canceled by an admin
+    pub canceled: bool,
 }
 
 /// Bucket index of the current day for the 30-day participation window.
@@ -432,7 +434,7 @@ impl PlatformGovernance {
         proposer: Address,
     ) {
         Self::assert_not_paused(&env);
-
+        
         proposer.require_auth();
 
         if options.is_empty() {
@@ -455,7 +457,7 @@ impl PlatformGovernance {
             .expect("not initialized");
 
         let now = env.ledger().timestamp();
-
+        
         // Initialize tally for each option
         let mut tally = Vec::new(&env);
         for option in options.iter() {
@@ -495,11 +497,6 @@ impl PlatformGovernance {
 
     /// Vote on a proposal.
     ///
-    /// If `voter` has delegated their power, this panics — they must retract
-    /// the delegation first.  If `voter` is a registered delegate, their
-    /// effective voting power includes the staked balances of every address
-    /// that has delegated to them (direct delegation only; not transitive).
-    ///
     /// `proposal_id` — proposal to vote on
     /// `option_id`  — option to vote for
     /// `voter`      — address voting
@@ -529,11 +526,7 @@ impl PlatformGovernance {
         }
 
         // Check if already voted
-        if env
-            .storage()
-            .persistent()
-            .has(&vote_key(proposal_id, &voter))
-        {
+        if env.storage().persistent().has(&vote_key(proposal_id, &voter)) {
             panic!("already voted on this proposal");
         }
 
@@ -610,27 +603,23 @@ impl PlatformGovernance {
             .instance()
             .get(&quorum_percentage_key())
             .expect("not initialized");
-
+        
         let quorum_threshold = (total_staked * quorum_percentage as i128) / 100;
-
+        
         if proposal.total_votes >= quorum_threshold {
             // Check if there's a winning option (simple majority)
             let mut max_votes = 0i128;
-            let mut winning_option_id = 0u32;
-
+            
             for tally_entry in proposal.tally.iter() {
                 if tally_entry.votes > max_votes {
                     max_votes = tally_entry.votes;
-                    winning_option_id = tally_entry.option_id;
                 }
             }
-
+            
             // Check if winning option has majority (>50% of votes cast)
             if max_votes > proposal.total_votes / 2 {
                 proposal.status = ProposalStatus::Passed;
             }
-
-            let _ = winning_option_id;
         }
 
         env.storage()
@@ -723,14 +712,102 @@ impl PlatformGovernance {
         }
 
         let now = env.ledger().timestamp();
-        if now < proposal.executable_at {
+        let executable_at = now + timelock;
+
+        proposal.status = ProposalStatus::Queued;
+        proposal.executable_at = executable_at;
+        env.storage()
+            .persistent()
+            .set(&proposal_key(proposal_id), &proposal);
+
+        let queued = QueuedProposal {
+            proposal_id,
+            queued_at: now,
+            executable_at,
+            canceled: false,
+        };
+        env.storage()
+            .persistent()
+            .set(&queued_proposal_key(proposal_id), &queued);
+
+        env.events().publish(
+            (symbol_short!("proposal"), symbol_short!("queued")),
+            (proposal_id, executable_at),
+        );
+    }
+
+    /// Cancel a queued proposal. Admin only; intended for emergencies.
+    ///
+    /// `proposal_id` — queued proposal to cancel
+    pub fn cancel_queued_proposal(env: Env, proposal_id: u64) {
+        Self::require_admin(&env);
+
+        let mut proposal: ProposalRecord = env
+            .storage()
+            .persistent()
+            .get(&proposal_key(proposal_id))
+            .expect("proposal not found");
+
+        if proposal.status != ProposalStatus::Queued {
+            panic!("proposal is not queued");
+        }
+
+        proposal.status = ProposalStatus::Canceled;
+        env.storage()
+            .persistent()
+            .set(&proposal_key(proposal_id), &proposal);
+
+        let mut queued: QueuedProposal = env
+            .storage()
+            .persistent()
+            .get(&queued_proposal_key(proposal_id))
+            .expect("queued record not found");
+        queued.canceled = true;
+        env.storage()
+            .persistent()
+            .set(&queued_proposal_key(proposal_id), &queued);
+
+        env.events().publish(
+            (symbol_short!("proposal"), symbol_short!("canceled")),
+            proposal_id,
+        );
+    }
+
+    /// Execute a queued proposal to update platform parameters.
+    ///
+    /// `proposal_id` — proposal to execute
+    pub fn execute(env: Env, proposal_id: u64) {
+        Self::assert_not_paused(&env);
+
+        let mut proposal: ProposalRecord = env
+            .storage()
+            .persistent()
+            .get(&proposal_key(proposal_id))
+            .expect("proposal not found");
+
+        if proposal.status != ProposalStatus::Queued {
+            panic!("proposal is not queued");
+        }
+
+        let queued: QueuedProposal = env
+            .storage()
+            .persistent()
+            .get(&queued_proposal_key(proposal_id))
+            .expect("queued record not found");
+
+        if queued.canceled {
+            panic!("proposal has been canceled");
+        }
+
+        let now = env.ledger().timestamp();
+        if now < queued.executable_at {
             panic!("timelock period has not elapsed");
         }
 
         // Find winning option
         let mut max_votes = 0i128;
         let mut winning_option_id = 0u32;
-
+        
         for tally_entry in proposal.tally.iter() {
             if tally_entry.votes > max_votes {
                 max_votes = tally_entry.votes;
@@ -741,21 +818,16 @@ impl PlatformGovernance {
         // Execute based on proposal type and winning option
         match proposal.proposal_type {
             ProposalType::PlatformFee => {
-                if let Some(option) = proposal
-                    .options
-                    .iter()
-                    .find(|opt| opt.option_id == winning_option_id)
-                {
+                // Find the option with the new fee value
+                if let Some(option) = proposal.options.iter().find(|opt| opt.option_id == winning_option_id) {
+                    // Parse fee from option description (simplified)
+                    // In production, this would be more robust
                     let new_fee = Self::parse_fee_from_description(&option.description);
                     env.storage().instance().set(&platform_fee_key(), &new_fee);
                 }
             }
             ProposalType::MinPlantingBond => {
-                if let Some(option) = proposal
-                    .options
-                    .iter()
-                    .find(|opt| opt.option_id == winning_option_id)
-                {
+                if let Some(option) = proposal.options.iter().find(|opt| opt.option_id == winning_option_id) {
                     let new_bond = Self::parse_bond_from_description(&option.description);
                     env.storage()
                         .instance()
@@ -763,22 +835,9 @@ impl PlatformGovernance {
                 }
             }
             ProposalType::VerifierWhitelist => {
-                if let Some(option) = proposal
-                    .options
-                    .iter()
-                    .find(|opt| opt.option_id == winning_option_id)
-                {
+                if let Some(option) = proposal.options.iter().find(|opt| opt.option_id == winning_option_id) {
                     Self::update_verifier_whitelist(&env, &option.description);
                 }
-            }
-            ProposalType::SpeciesSelection => {
-                // Species selection proposals are informational
-                // The winning species is recorded but no contract state is updated
-                // In production, this might trigger an event or update a species registry
-                env.events().publish(
-                    (symbol_short!("species"), symbol_short!("selected")),
-                    (proposal_id, winning_option_id),
-                );
             }
         }
 
@@ -1191,8 +1250,8 @@ impl PlatformGovernance {
             .expect("not initialized")
     }
 
-    /// Returns the DelegateRecord for a registered delegate, or None.
-    pub fn get_delegate(env: Env, delegate: Address) -> Option<DelegateRecord> {
+    /// Returns true if governance operations are paused.
+    pub fn is_paused(env: Env) -> bool {
         env.storage()
             .persistent()
             .get(&delegate_info_key(&delegate))
@@ -1211,9 +1270,15 @@ impl PlatformGovernance {
         let staking_contract: Address = env
             .storage()
             .instance()
-            .get(&staking_contract_key())
-            .expect("not initialized");
-        Self::aggregate_delegated_power(&env, &staking_contract, &delegate)
+            .get(&symbol_short!("PAUSED"))
+            .unwrap_or(false)
+    }
+
+    /// Returns the queued record for a proposal, if any.
+    pub fn get_queued_proposal(env: Env, proposal_id: u64) -> Option<QueuedProposal> {
+        env.storage()
+            .persistent()
+            .get(&queued_proposal_key(proposal_id))
     }
 
     // ── Timelock Queue Query Endpoints ──────────────────────────────────────
@@ -1295,12 +1360,28 @@ impl PlatformGovernance {
         if new_timelock == 0 {
             panic!("timelock must be > 0");
         }
+        // Enforce a minimum timelock of 48 hours to protect the community.
+        if new_timelock < DEFAULT_TIMELOCK_SECONDS {
+            panic!("timelock must be at least 48 hours");
+        }
         env.storage()
             .instance()
             .set(&timelock_seconds_key(), &new_timelock);
         Self::bump_instance(&env);
         env.events()
             .publish((symbol_short!("timelock"),), new_timelock);
+    }
+
+    /// Pause or unpause governance operations. Admin only.
+    pub fn set_paused(env: Env, paused: bool) {
+        Self::require_admin(&env);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("PAUSED"), &paused);
+        env.events().publish(
+            (symbol_short!("paused"),),
+            paused,
+        );
     }
 
     /// Directly set platform fee (emergency override). Admin only.
@@ -1410,14 +1491,14 @@ impl PlatformGovernance {
             .persistent()
             .get(&verifier_whitelist_key())
             .unwrap_or_else(|| Vec::new(&env));
-
+        
         // Check if already whitelisted
         for v in whitelist.iter() {
             if v == verifier {
                 panic!("verifier already whitelisted");
             }
         }
-
+        
         whitelist.push_back(verifier.clone());
         env.storage()
             .persistent()
@@ -1434,7 +1515,7 @@ impl PlatformGovernance {
             .persistent()
             .get(&verifier_whitelist_key())
             .unwrap_or_else(|| Vec::new(&env));
-
+        
         let mut found = false;
         let mut new_whitelist = Vec::new(&env);
         for v in whitelist.iter() {
@@ -1444,11 +1525,11 @@ impl PlatformGovernance {
                 new_whitelist.push_back(v.clone());
             }
         }
-
+        
         if !found {
             panic!("verifier not whitelisted");
         }
-
+        
         env.storage()
             .persistent()
             .set(&verifier_whitelist_key(), &new_whitelist);
@@ -1988,68 +2069,35 @@ impl PlatformGovernance {
     }
 
     fn get_voting_power(_env: &Env, _staking_contract: &Address, _voter: &Address) -> i128 {
-        // Simplified: return a fixed voting power for staked verifiers.
-        // In production this calls the staking contract for the actual amount.
-        1000i128
+        // Simplified: return a fixed voting power for staked verifiers
+        // In production, this would call the staking contract to get actual staked amount
+        // For now, we'll use a mock implementation
+        1000i128 // Fixed voting power for demonstration
     }
 
     fn get_total_staked(_env: &Env, _staking_contract: &Address) -> i128 {
-        // Simplified: return a fixed total staked amount.
-        // In production this queries the staking contract.
-        100_000i128
-    }
-
-    /// Sum the staked balances of every address that has delegated to `delegate`.
-    /// Delegation is direct-only (not transitive).
-    fn aggregate_delegated_power(
-        env: &Env,
-        staking_contract: &Address,
-        delegate: &Address,
-    ) -> i128 {
-        let delegators: Vec<Address> = env
-            .storage()
-            .persistent()
-            .get(&delegators_key(delegate))
-            .unwrap_or_else(|| Vec::new(env));
-
-        let mut total = 0i128;
-        for delegator in delegators.iter() {
-            total += Self::get_voting_power(env, staking_contract, &delegator);
-        }
-        total
-    }
-
-    /// Remove `delegator` from `delegate`'s reverse-mapping list.
-    fn remove_from_delegators(env: &Env, delegate: &Address, delegator: &Address) {
-        let delegators: Vec<Address> = env
-            .storage()
-            .persistent()
-            .get(&delegators_key(delegate))
-            .unwrap_or_else(|| Vec::new(env));
-
-        let mut updated = Vec::new(env);
-        for d in delegators.iter() {
-            if d != *delegator {
-                updated.push_back(d.clone());
-            }
-        }
-        env.storage()
-            .persistent()
-            .set(&delegators_key(delegate), &updated);
+        // Simplified: return a fixed total staked amount
+        // In production, this would query the staking contract
+        100_000i128 // Fixed total for demonstration
     }
 
     fn parse_fee_from_description(_description: &String) -> u64 {
-        // Simplified parsing – production would be more robust.
+        // Simplified parsing: extract number from description
+        // In production, this would be more robust
+        // For now, return a default
         10u64
     }
 
     fn parse_bond_from_description(_description: &String) -> i128 {
-        // Simplified parsing.
+        // Simplified parsing
+        // For now, return a default
         1_000_000i128
     }
 
     fn update_verifier_whitelist(_env: &Env, _description: &String) {
-        // Simplified – production would parse addresses from description.
+        // Simplified: parse verifier addresses from description
+        // In production, this would be more robust
+        // For now, no-op
     }
 }
 
@@ -2179,11 +2227,46 @@ mod tests {
         env.ledger()
             .set_timestamp(env.ledger().timestamp() + 200000);
 
-        let _proposal = client.get_proposal(&0);
+        // Queue the proposal and verify the timelock is set.
+        client.queue(&0);
+        let queued = client.get_queued_proposal(&0).unwrap();
+        assert!(matches!(client.get_proposal(&0).status, ProposalStatus::Queued));
+        assert_eq!(queued.executable_at, env.ledger().timestamp() + DEFAULT_TIMELOCK_SECONDS);
+
+        // Advance ledger past the timelock.
+        env.ledger().set_timestamp(queued.executable_at + 1);
+
+        client.execute(&0);
+        let executed = client.get_proposal(&0);
+        assert!(matches!(executed.status, ProposalStatus::Executed));
     }
 
     #[test]
-    #[should_panic(expected = "proposal has not passed")]
+    #[should_panic(expected = "timelock period has not elapsed")]
+    fn test_execute_before_timelock_rejected() {
+        let (env, admin, _, _, client) = setup();
+
+        client.update_quorum_percentage(&1);
+
+        let description_hash = String::from_str(&env, "hash123");
+        let proposal_type = ProposalType::PlatformFee;
+        
+        let mut options = Vec::new(&env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(&env, "Set fee to 10%"),
+        });
+
+        client.create_proposal(&description_hash, &proposal_type, &options, &1, &admin);
+        client.vote(&0, &1, &admin);
+        client.queue(&0);
+
+        // Try to execute immediately, before the timelock elapses.
+        client.execute(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "proposal is not queued")]
     fn test_execute_failed_proposal_rejected() {
         let (env, admin, _, _, _tree_token, client) = setup();
         let mut options = Vec::new(&env);
@@ -2195,7 +2278,7 @@ mod tests {
 
         let description_hash = String::from_str(&env, "hash123");
         let proposal_type = ProposalType::PlatformFee;
-
+        
         let mut options = Vec::new(&env);
         options.push_back(VoteOption {
             option_id: 1,
@@ -2206,6 +2289,50 @@ mod tests {
 
         // Try to queue without the proposal having passed
         client.queue(&0);
+    }
+
+    #[test]
+    fn test_cancel_queued_proposal() {
+        let (env, admin, _, _, client) = setup();
+
+        client.update_quorum_percentage(&1);
+
+        let description_hash = String::from_str(&env, "hash123");
+        let proposal_type = ProposalType::PlatformFee;
+        
+        let mut options = Vec::new(&env);
+        options.push_back(VoteOption {
+            option_id: 1,
+            description: String::from_str(&env, "Set fee to 10%"),
+        });
+
+        client.create_proposal(&description_hash, &proposal_type, &options, &1, &admin);
+        client.vote(&0, &1, &admin);
+        client.queue(&0);
+
+        client.cancel_queued_proposal(&0);
+        let canceled = client.get_proposal(&0);
+        assert!(matches!(canceled.status, ProposalStatus::Canceled));
+        assert!(client.get_queued_proposal(&0).unwrap().canceled);
+    }
+
+    #[test]
+    #[should_panic(expected = "timelock must be at least 48 hours")]
+    fn test_update_timelock_minimum_enforced() {
+        let (_, _admin, _, _, client) = setup();
+
+        client.update_timelock(&(DEFAULT_TIMELOCK_SECONDS - 1));
+    }
+
+    #[test]
+    fn test_set_paused() {
+        let (_, admin, _, _, client) = setup();
+
+        client.set_paused(&true);
+        assert!(client.is_paused());
+
+        client.set_paused(&false);
+        assert!(!client.is_paused());
     }
 
     #[test]
