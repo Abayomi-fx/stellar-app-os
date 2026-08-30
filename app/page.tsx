@@ -119,6 +119,15 @@ export default function Home(): JSX.Element {
           <Button asChild variant="outline" size="lg" className="w-full">
             <Link href="/leaderboard">View Leaderboard</Link>
           </Button>
+          <Button
+            data-tour-id="affiliate-program-button"
+            asChild
+            variant="outline"
+            size="lg"
+            className="w-full"
+          >
+            <Link href="/affiliate">Become an Affiliate — Earn 10-25%</Link>
+          </Button>
         </CardContent>
       </Card>
 
