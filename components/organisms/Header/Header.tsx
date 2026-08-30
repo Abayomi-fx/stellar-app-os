@@ -16,6 +16,7 @@ import { useAppTranslation } from '@/hooks/useTranslation';
 import { useTheme } from '@/hooks/useTheme';
 import { CompactThemeSwitcher } from '@/components/molecules/ThemeSwitcher/ThemeSwitcher';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/useTheme';
 
 const NAV_LINKS = [
   { href: '/', label: 'nav.home' },

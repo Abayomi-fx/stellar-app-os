@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import './globals.css';
 import { Footer } from '@/components/organisms/Footer/Footer';
 import { Header } from '@/components/organisms/Header/Header';
 import { QueryProvider } from '@/components/providers/QueryProvider';
@@ -105,8 +106,8 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <WalletProvider>
           <ToastProvider>
-            <NotificationProvider>
-              <QueryProvider>
+            <QueryProvider>
+              <NotificationProvider>
                 <a
                   href="#main-content"
                   className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-stellar-blue text-stellar-navy px-4 py-2 rounded-md font-semibold focus:ring-2 focus:ring-stellar-blue focus:ring-offset-2"
@@ -116,8 +117,10 @@ export default function RootLayout({
                 <Header />
                 <main id="main-content">{children}</main>
                 <Footer />
-              </QueryProvider>
-            </NotificationProvider>
+                <NotificationCenterDrawer />
+                <ToastContainer />
+              </NotificationProvider>
+            </QueryProvider>
           </ToastProvider>
         </WalletProvider>
       </body>
