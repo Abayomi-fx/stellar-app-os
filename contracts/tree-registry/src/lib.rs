@@ -445,6 +445,15 @@ impl TreeRegistry {
         env.storage().persistent().get(&Self::tree_key(env, id))
     }
 
+    /// Check if a tree is dead.
+    pub fn is_tree_dead(env: Env, id: u64) -> bool {
+        if let Some(tree) = Self::get_tree(env, id) {
+            tree.health == Some(TreeHealth::Dead)
+        } else {
+            false
+        }
+    }
+
     pub fn list_by_sponsor(env: Env, sponsor: Address) -> Vec<TreeRecord> {
         let tree_ids: Vec<u64> = env
             .storage()
