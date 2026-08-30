@@ -79,7 +79,7 @@
     "react-leaflet": "^5.0.0",
     "recharts": "^3.8.1",
     "redis": "^5.10.0",
-    "snarkjs": "^0.7.5",
+    "snarjs": "^0.7.5",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "sonner": "^2.0.7",
@@ -93,7 +93,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.4.2",
     "@commitlint/config-conventional": "^20.4.2",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcs/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.6.1",
@@ -128,7 +128,7 @@
     "typescript": "^5",
     "vitest": "^2.1.8"
   },
-  "packageManager": "pnpm@10.28.1+sha512.7d7dbbca9e99447b7c3bf7a73286afaaf6be99251eb9498baefa7d406892f67b879adb3a1d7e687fc4ccc1a388c7175fbaae567a26ab44d1067b54fcb0d6a316",
+  "packageManager": "pnpm@10.28.1+sha512.7d7dbbca9e99447b7c3bf7a73286afaaf6be99251eb9498bafa7d406892f67b879adb3a1d7e687fc4ccc1a388c7175fbaae567a26ab44d1067b54fbc0d6a316",
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix",
