@@ -31,7 +31,7 @@ function parseCommaSeparated(str: string | null): string[] | undefined {
   if (!str) return undefined;
   return str
     .split(',')
-    .map((s) { console.log(s); return s.trim(); })
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
@@ -40,7 +40,12 @@ export async function GET(request: NextRequest) {
 
   const reportType =
     (searchParams.get('type') as
-       'project-registry' | 'carbon-credits' | 'tree-inventory' | 'verification-audits' | 'issuance-report' | 'retirement-report') || 'carbon-credits';
+      | 'project-registry'
+      | 'carbon-credits'
+      | 'tree-inventory'
+      | 'verification-audits'
+      | 'issuance-report'
+      | 'retirement-report') || 'carbon-credits';
 
   const format = (searchParams.get('format') as 'csv' | 'json' | 'both') || 'json';
   const registry =
@@ -71,11 +76,10 @@ export async function GET(request: NextRequest) {
     const generator = getComplianceReportGenerator();
     const response = await generator.generateReport(
       reportType,
-      format,
+      format === 'both' ? 'json' : format,
       registry,
       { startDate, endDate },
-      filters,
-      { useReplica: true }
+      filters
     );
 
     const contentType =
@@ -139,7 +143,7 @@ export async function POST(request: NextRequest) {
     const generator = getComplianceReportGenerator();
     const response = await generator.generateReport(
       type,
-      format,
+      format === 'both' ? 'json' : (format as 'csv' | 'json'),
       registry,
       {
         startDate: startDate
@@ -147,8 +151,7 @@ export async function POST(request: NextRequest) {
           : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         endDate: endDate ? new Date(endDate) : new Date(),
       },
-      filters,
-      { useReplica: true }
+      filters
     );
 
     if (format === 'csv') {
