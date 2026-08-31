@@ -1375,6 +1375,14 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Error(Contract, #96)")]
+    fn test_zero_amount_rejected() {
+        let (_env, _admin, donor, xlm, _usdc, _eurc, client) = setup();
+        client.donate(&donor, &xlm, &0, &2);
+    }
+
+
+    #[test]
     fn test_add_accepted_token_accepts_additional_payment_token() {
         let (env, admin, donor, _xlm, _usdc, _eurc, client) = setup();
         let extra = env

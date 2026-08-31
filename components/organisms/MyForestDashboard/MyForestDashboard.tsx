@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { pdf } from '@react-pdf/renderer';
 import { TreePine, Wind, Globe, Layers, Plus, ChevronRight, Download } from 'lucide-react';
 import { SponsorTreeList } from '@/components/organisms/SponsorTreeList';
-import { SponsorImpactComparison } from '@/components/organisms/SponsorImpactComparison';
+import { TeamForestPanel } from '@/components/organisms/TeamForestPanel';
 import { ForestReportPDF } from './ForestReportPDF';
 import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/atoms/Button';
@@ -155,7 +155,7 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
           regionCount={stats.regionCount}
           activeCount={stats.activeCount}
           generatedDate={generatedDate}
-        />,
+        />
       ).toBlob();
 
       const url = URL.createObjectURL(blob);
@@ -358,22 +358,7 @@ export function MyForestDashboard({ initialFilters }: MyForestDashboardProps) {
         )}
       </section>
 
-      {/* ===== IMPACT COMPARISON ===== */}
-      <section aria-labelledby="impact-comparison-heading">
-        <div className="mb-5 flex items-center justify-between">
-          <h2
-            id="impact-comparison-heading"
-            className="text-xl font-black tracking-tight text-foreground"
-          >
-            Impact Comparison
-          </h2>
-        </div>
-        <SponsorImpactComparison
-          sponsorCo2OffsetKg={stats.totalCO2}
-          sponsorTreeCount={totalCount}
-          isLoading={isLoading}
-        />
-      </section>
+      <TeamForestPanel />
 
       {/* ===== TREE CARD GRID ===== */}
       <section aria-labelledby="forest-grid-heading">

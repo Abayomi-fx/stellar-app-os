@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { CarbonChart } from './CarbonChart';
 import { BadgesList, type BadgeItem } from './BadgesList';
 import { SocialShareCard } from './SocialShareCard';
-import { SponsorImpactComparison } from '@/components/organisms/SponsorImpactComparison';
 import { CarbonCreditSwapWidget } from '@/components/organisms/CarbonCreditSwapWidget';
 import { Counter } from '@/components/atoms/Counter';
 import { Button } from '@/components/ui/button';

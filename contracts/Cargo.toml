@@ -25,6 +25,7 @@ members = [
     "species-registry",
     "species-voting",
     "platform-governance",
+    "nft-certificate",
     "subscription-sponsorship",
     "nft-certificate",
     "sponsor-receipt",
@@ -33,6 +34,9 @@ members = [
     "tree-registry",
     "verifier-staking",
     "species-catalog",
+    "upgrade-timelock",
+    "leaderboard",
+    "transparent-proxy",
 ]
 resolver = "2"
 
