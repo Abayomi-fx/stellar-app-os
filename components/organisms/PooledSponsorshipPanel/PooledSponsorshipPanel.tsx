@@ -202,7 +202,6 @@ function PoolCard({ pool, sponsorAddress, onJoin }: PoolCardProps) {
 // ── Create pool form ──────────────────────────────────────────────────────────
 
 interface CreatePoolFormProps {
-  sponsorAddress: string;
   onCreate: (fields: {
     treeRef: string;
     species: string;
@@ -215,7 +214,7 @@ interface CreatePoolFormProps {
 
 const SPECIES_OPTIONS = ['Teak', 'Moringa', 'Eucalyptus', 'Mangrove', 'Acacia', 'Neem'];
 
-function CreatePoolForm({ sponsorAddress, onCreate }: CreatePoolFormProps) {
+function CreatePoolForm({ onCreate }: CreatePoolFormProps) {
   const [treeRef, setTreeRef] = useState('');
   const [species, setSpecies] = useState('');
   const [region, setRegion] = useState('');
@@ -224,13 +223,17 @@ function CreatePoolForm({ sponsorAddress, onCreate }: CreatePoolFormProps) {
   const [sponsorName, setSponsorName] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const parsedTarget = parseFloat(targetUsdc);
+  const parsedContrib = contribution === '' ? 0 : parseFloat(contribution);
   const valid =
-    treeRef.trim() &&
-    species &&
-    region.trim() &&
-    parseFloat(targetUsdc) > 0 &&
-    parseFloat(contribution) >= 0 &&
-    parseFloat(contribution) <= parseFloat(targetUsdc);
+    treeRef.trim() !== '' &&
+    species !== '' &&
+    region.trim() !== '' &&
+    !isNaN(parsedTarget) &&
+    parsedTarget > 0 &&
+    !isNaN(parsedContrib) &&
+    parsedContrib >= 0 &&
+    parsedContrib <= parsedTarget;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,8 +244,8 @@ function CreatePoolForm({ sponsorAddress, onCreate }: CreatePoolFormProps) {
         treeRef: treeRef.trim(),
         species,
         region: region.trim(),
-        targetUsdc: parseFloat(targetUsdc),
-        contributionUsdc: parseFloat(contribution) || 0,
+        targetUsdc: parsedTarget,
+        contributionUsdc: parsedContrib,
         sponsorName: sponsorName.trim() || undefined,
       });
       setTreeRef(''); setSpecies(''); setRegion('');
@@ -394,7 +397,7 @@ export function PooledSponsorshipPanel({ sponsorAddress = '' }: PooledSponsorshi
 
       {/* Create form */}
       {showCreate && sponsorAddress && (
-        <CreatePoolForm sponsorAddress={sponsorAddress} onCreate={handleCreate} />
+        <CreatePoolForm onCreate={handleCreate} />
       )}
 
       {loading ? (
