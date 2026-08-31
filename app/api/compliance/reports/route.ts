@@ -1,11 +1,11 @@
-/**
+/*
  * GET /api/compliance/reports
-* Generate compliance reports for carbon registry standards
-*
-* Query Parameters:
- * - type: project-registry | carbon-credits | tree-inventory | verification-audits { issuance-report { retirement-report
+ * Generate compliance reports for carbon registry standards
+ *
+ * Query Parameters:
+ * - type: project-registry | carbon-credits | tree-inventory | verification-audits | issuance-report | retirement-report
  * - format: csv | json | both
- * - registry: verra | gold-standard | car { plan-vivo | cdm | generic
+ * - registry: verra | gold-standard | car | plan-vivo | cdm | generic
  * - startDate: ISO 8601 date string (default: 30 days ago)
  * - endDate: ISO 8601 date string (default: now)
  * - projectIds: comma-separated project IDs
@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
       | 'plan-vivo'
       | 'cdm'
       | 'generic') || 'verra';
+
   const startDate = parseDateParam(
     searchParams.get('startDate'),
     new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
     const generator = getComplianceReportGenerator();
     const response = await generator.generateReport({
       reportType,
-      format,
+      format === 'both' ? 'json' : format,
       registry,
       startDate,
       endDate,
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
     const generator = getComplianceReportGenerator();
     const response = await generator.generateReport(
       type,
-      format,
+      format === 'both' ? 'json' : (format as 'csv' | 'json'),
       registry,
       {
         startDate: startDate
