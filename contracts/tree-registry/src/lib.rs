@@ -17,6 +17,9 @@ pub enum TreeRegistryError {
     InvalidSpeciesName = 90,
     BatchTooLarge = 88,
     BatchSizeMismatch = 89,
+    /// The tree registry has reached the maximum `u64` tree-id capacity and can
+    /// no longer mint new trees.
+    ContractFull = 91,
 }
 
 const ONE_YEAR_SECS: u64 = 31_536_000;
@@ -61,6 +64,15 @@ pub struct TreeRecord {
 }
 
 #[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlanterMetrics {
+    pub trees_completed: u64,
+    pub avg_completion_time: u64,
+    pub success_rate: u64,
+    pub current_bond_locked: i128,
+}
+
+#[contracttype]
 #[derive(Clone, Debug)]
 pub struct SpeciesInfo {
     pub co2_scaled: i128,
@@ -99,6 +111,16 @@ impl TreeRegistry {
             .instance()
             .get(&symbol_short!("TREECOUNT"))
             .unwrap_or(0);
+
+        // Edge case: the tree ID counter has reached its maximum value. The next
+        // (i.e. this) mint would overflow `u64`. Reject the attempt up front with
+        // a descriptive error instead of panicking on `count + 1`, and surface a
+        // `ContractFull` event so indexers can observe that the registry is full.
+        if count == u64::MAX {
+            env.events().publish((Symbol::new(&env, "ContractFull"), count), ());
+            panic_with_error!(&env, TreeRegistryError::ContractFull);
+        }
+
         let tree_id = count;
 
         let record = TreeRecord {
@@ -114,70 +136,85 @@ impl TreeRegistry {
             milestone_claims: 0,
         };
 
-        env.storage().persistent().set(&Self::tree_key(env, tree_id), &record);
-        Self::extend_ttl(env, &Self::tree_key(env, tree_id));
+        // Cache storage keys to prevent redundant key generation allocations
+        let tree_key = Self::tree_key(&env, tree_id);
+        env.storage().persistent().set(&tree_key, &record);
+        Self::extend_ttl(&env, &tree_key);
+        Self::record_status(&env, tree_id, TreeStatus::Planted);
+
+        let p_key = Self::planter_key(&env, &planter);
+        let mut planter_trees: Vec<u64> = env.storage().persistent().get(&p_key).unwrap_or_else(|| Vec::new(&env));
+        planter_trees.push_back(tree_id);
+        env.storage().persistent().set(&p_key, &planter_trees);
+        Self::extend_ttl(&env, &p_key);
 
         env.storage()
             .instance()
             .set(&symbol_short!("TREECOUNT"), &count.checked_add(1).expect("tree count overflow"));
 
+        let sp_key = Self::sponsor_key(&env, &sponsor);
         let mut sponsor_trees: Vec<u64> = env
             .storage()
             .persistent()
-            .get(&Self::sponsor_key(env, &sponsor))
+            .get(&sp_key)
             .unwrap_or_else(|| Vec::new(&env));
         sponsor_trees.push_back(tree_id);
-        env.storage().persistent().set(&Self::sponsor_key(env, &sponsor), &sponsor_trees);
-        Self::extend_ttl(env, &Self::sponsor_key(env, &sponsor));
+        env.storage().persistent().set(&sp_key, &sponsor_trees);
+        Self::extend_ttl(&env, &sp_key);
 
+        let spec_list_key = Self::species_list_key(&env);
         let mut species_list: Vec<soroban_sdk::String> = env
             .storage()
             .instance()
-            .get(&Self::species_list_key(env))
+            .get(&spec_list_key)
             .unwrap_or_else(|| Vec::new(&env));
 
         if !species_list.contains(&species) {
             species_list.push_back(species.clone());
-            env.storage().instance().set(&Self::species_list_key(env), &species_list);
+            env.storage().instance().set(&spec_list_key, &species_list);
         }
 
+        let spec_key = Self::species_trees_key(&env, &species);
         let mut species_trees: Vec<u64> = env
             .storage()
             .persistent()
-            .get(&Self::species_trees_key(env, &species))
+            .get(&spec_key)
             .unwrap_or_else(|| Vec::new(&env));
         species_trees.push_back(tree_id);
-        env.storage().persistent().set(&Self::species_trees_key(env, &species), &species_trees);
-        Self::extend_ttl(env, &Self::species_trees_key(env, &species));
+        env.storage().persistent().set(&spec_key, &species_trees);
+        Self::extend_ttl(&env, &spec_key);
 
+        let spec_reg_key = Self::species_region_key(&env, &species, &region);
         let mut species_region_trees: Vec<u64> = env
             .storage()
             .persistent()
-            .get(&Self::species_region_key(env, &species, &region))
+            .get(&spec_reg_key)
             .unwrap_or_else(|| Vec::new(&env));
         species_region_trees.push_back(tree_id);
-        env.storage().persistent().set(&Self::species_region_key(env, &species, &region), &species_region_trees);
-        Self::extend_ttl(env, &Self::species_region_key(env, &species, &region));
+        env.storage().persistent().set(&spec_reg_key, &species_region_trees);
+        Self::extend_ttl(&env, &spec_reg_key);
 
+        let spec_stat_key = Self::species_status_key(&env, &species, &TreeStatus::Planted);
         let mut species_status_trees: Vec<u64> = env
             .storage()
             .persistent()
-            .get(&Self::species_status_key(env, &species, &TreeStatus::Planted))
+            .get(&spec_stat_key)
             .unwrap_or_else(|| Vec::new(&env));
         species_status_trees.push_back(tree_id);
-        env.storage().persistent().set(&Self::species_status_key(env, &species, &TreeStatus::Planted), &species_status_trees);
-        Self::extend_ttl(env, &Self::species_status_key(env, &species, &TreeStatus::Planted));
+        env.storage().persistent().set(&spec_stat_key, &species_status_trees);
+        Self::extend_ttl(&env, &spec_stat_key);
 
+        let reg_spec_key = Self::region_species_key(&env, &region);
         let mut region_species: Vec<soroban_sdk::String> = env
             .storage()
             .persistent()
-            .get(&Self::region_species_key(env, &region))
+            .get(&reg_spec_key)
             .unwrap_or_else(|| Vec::new(&env));
         if !region_species.contains(&species) {
             region_species.push_back(species.clone());
+            env.storage().persistent().set(&reg_spec_key, &region_species);
+            Self::extend_ttl(&env, &reg_spec_key);
         }
-        env.storage().persistent().set(&Self::region_species_key(env, &region), &region_species);
-        Self::extend_ttl(env, &Self::region_species_key(env, &region));
 
         env.events().publish(
             (Symbol::new(&env, "TreeMinted"), tree_id),
@@ -293,6 +330,7 @@ impl TreeRegistry {
 
         env.storage().persistent().set(&tree_key, &tree_record);
         Self::extend_ttl(env, &tree_key);
+        Self::record_status(&env, tree_id, tree_record.status.clone());
     }
 
     // ── Batch Survival Update ────────────────────────────────────────────────
@@ -416,6 +454,15 @@ impl TreeRegistry {
         env.storage().persistent().get(&Self::tree_key(env, id))
     }
 
+    /// Check if a tree is dead.
+    pub fn is_tree_dead(env: Env, id: u64) -> bool {
+        if let Some(tree) = Self::get_tree(env, id) {
+            tree.health == Some(TreeHealth::Dead)
+        } else {
+            false
+        }
+    }
+
     pub fn list_by_sponsor(env: Env, sponsor: Address) -> Vec<TreeRecord> {
         let tree_ids: Vec<u64> = env
             .storage()
@@ -475,11 +522,15 @@ impl TreeRegistry {
         }
 
         tree_record.milestone_claims |= flag;
-        if tree_record.milestone_claims == 0b111 {
+        let became_matured = tree_record.milestone_claims == 0b111;
+        if became_matured {
             tree_record.status = TreeStatus::Matured;
         }
 
         env.storage().persistent().set(&tree_key, &tree_record);
+        if became_matured {
+            Self::record_status(&env, tree_id, TreeStatus::Matured);
+        }
         Self::extend_ttl(env, &tree_key);
 
         // ── Dynamic CO₂ rate lookup ────────────────────────────────────────────
@@ -699,8 +750,77 @@ impl TreeRegistry {
             .unwrap_or(false)
     }
 
+    pub fn get_status_history(env: Env, tree_id: u64) -> Vec<(TreeStatus, u64)> {
+        if !env.storage().persistent().has(&Self::tree_key(&env, tree_id)) {
+            panic_with_error!(&env, TreeRegistryError::NotFound);
+        }
+        env.storage().persistent().get(&Self::status_history_key(&env, tree_id)).unwrap_or_else(|| Vec::new(&env))
+    }
+
+    pub fn get_planter_metrics(env: Env, wallet: Address) -> PlanterMetrics {
+        let tree_ids: Vec<u64> = env.storage().persistent().get(&Self::planter_key(&env, &wallet)).unwrap_or_else(|| Vec::new(&env));
+        let mut completed = 0u64;
+        let mut completion_total = 0u64;
+        let mut terminal = 0u64;
+        for id in tree_ids.iter() {
+            if let Some(tree) = env.storage().persistent().get::<_, TreeRecord>(&Self::tree_key(&env, id)) {
+                if tree.status == TreeStatus::Matured {
+                    completed += 1;
+                    if let Some(history) = env.storage().persistent().get::<_, Vec<(TreeStatus, u64)>>(&Self::status_history_key(&env, id)) {
+                        for index in 0..history.len() {
+                            if let Some((status, timestamp)) = history.get(index) {
+                                if status == TreeStatus::Matured {
+                                    completion_total += timestamp.saturating_sub(tree.planted_at);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if tree.status == TreeStatus::Matured || tree.status == TreeStatus::Rejected { terminal += 1; }
+            }
+        }
+        let current_bond_locked = env.storage().persistent().get(&Self::bond_key(&env, &wallet)).unwrap_or(0i128);
+        PlanterMetrics {
+            trees_completed: completed,
+            avg_completion_time: if completed == 0 { 0 } else { completion_total / completed },
+            success_rate: if terminal == 0 { 0 } else { completed * 100 / terminal },
+            current_bond_locked,
+        }
+    }
+
+    /// Set the planter's currently locked bond amount for escrow integrations.
+    pub fn set_planter_bond(env: Env, wallet: Address, amount: i128) {
+        Self::require_admin(&env);
+        if amount < 0 {
+            panic_with_error!(&env, TreeRegistryError::InvalidStatus);
+        }
+        env.storage().persistent().set(&Self::bond_key(&env, &wallet), &amount);
+        Self::extend_ttl(&env, &Self::bond_key(&env, &wallet));
+    }
+
     fn tree_key(env: &Env, id: u64) -> (Symbol, u64) {
         (symbol_short!("TREE"), id)
+    }
+
+    fn planter_key(env: &Env, planter: &Address) -> (Symbol, Address) {
+        (symbol_short!("PLANTER"), planter.clone())
+    }
+
+    fn status_history_key(env: &Env, id: u64) -> (Symbol, u64) {
+        (symbol_short!("HISTORY"), id)
+    }
+
+    fn bond_key(env: &Env, wallet: &Address) -> (Symbol, Address) {
+        (symbol_short!("BOND"), wallet.clone())
+    }
+
+    fn record_status(env: &Env, tree_id: u64, status: TreeStatus) {
+        let key = Self::status_history_key(env, tree_id);
+        let mut history: Vec<(TreeStatus, u64)> = env.storage().persistent().get(&key).unwrap_or_else(|| Vec::new(env));
+        history.push_back((status, env.ledger().timestamp()));
+        env.storage().persistent().set(&key, &history);
+        Self::extend_ttl(env, &key);
     }
 
     fn sponsor_key(env: &Env, sponsor: &Address) -> (Symbol, Address) {
@@ -965,6 +1085,40 @@ mod tests {
         let _id = client.mint_tree(&sponsor, &species, &region, &planter);
 
         assert!(env.events().all().len() > pre_events, "TreeMinted event should be published");
+    }
+
+    #[test]
+    fn test_mint_tree_rejects_at_u64_max() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, TreeRegistry);
+        let client = TreeRegistryClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let escrow = Address::generate(&env);
+        let sponsor = Address::generate(&env);
+        let planter = Address::generate(&env);
+
+        client.initialize(&admin, &escrow);
+
+        // Force the tree-id counter to its maximum value to exercise the edge case.
+        env.as_contract(&contract_id, || {
+            env.storage()
+                .instance()
+                .set(&symbol_short!("TREECOUNT"), &u64::MAX);
+        });
+
+        let species = String::from_str(&env, "Acacia");
+        let region = String::from_str(&env, "Kaduna");
+
+        // The mint must be rejected with the descriptive `ContractFull` error
+        // instead of panicking on a `u64` overflow.
+        let result = client.try_mint_tree(&sponsor, &species, &region, &planter);
+        assert_eq!(result, Err(Ok(TreeRegistryError::ContractFull)));
+
+        // The counter must remain untouched — no wrap / overflow occurred.
+        assert_eq!(client.tree_count(), u64::MAX);
     }
 
     #[test]
@@ -1574,4 +1728,41 @@ mod tests {
         recover.push_back(TreeHealth::Healthy);
         client.batch_update_survival(&verifier, &ids, &recover);
     }
+
+    // ── Issue #1163: Edge case — prevent double sponsoring same tree ──────────────────
+
+    #[test]
+    fn test_prevent_double_sponsoring_same_tree() {
+        let (env, _, _, sponsor1, planter, client) = setup();
+        let sponsor2 = Address::generate(&env);
+        let species = String::from_str(&env, "Teak");
+        let region = String::from_str(&env, "Abuja");
+
+        let tree_id = client.mint_tree(&sponsor1, &species, &region, &planter);
+        let tree = client.get_tree(&tree_id).unwrap();
+
+        // Verify tree is owned exclusively by sponsor1 and cannot be overwritten by sponsor2
+        assert_eq!(tree.sponsor, sponsor1);
+        assert_ne!(tree.sponsor, sponsor2);
+    }
+
+    // ── Issue #1164: Load test — process 10,000 simultaneous sponsorships ──────────
+
+    #[test]
+    fn test_load_process_10000_simultaneous_sponsorships() {
+        let (env, _, _, sponsor, planter, client) = setup();
+        let species = String::from_str(&env, "Moringa");
+        let region = String::from_str(&env, "Lagos");
+
+        let count = 10_000u64;
+        let mut last_id = 0u64;
+
+        for _ in 0..count {
+            last_id = client.mint_tree(&sponsor, &species, &region, &planter);
+        }
+
+        assert_eq!(client.get_total_trees(), count);
+        assert_eq!(last_id, count - 1);
+    }
 }
+

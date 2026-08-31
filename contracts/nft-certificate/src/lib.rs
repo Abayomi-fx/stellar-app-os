@@ -25,7 +25,6 @@ use soroban_sdk::{
     contract, contractimpl, contracttype, panic_with_error, symbol_short, token, Address, Env,
     String, Vec,
 };
-use harvesta_errors::{HarvestaError, NftError};
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -74,21 +73,19 @@ pub enum NftCertError {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-/// Certificate metadata stored on-chain.
+/// On-chain data stored for each certificate NFT.
 #[contracttype]
 #[derive(Clone, Debug)]
-pub struct CertificateMetadata {
-    /// Number of trees represented by this certificate
-    pub tree_count: i128,
-    /// CO2 offset in kilograms
-    pub co2_offset_kg: i128,
-    /// Planting date (ISO 8601 string)
-    pub planting_date: String,
-    /// Region where trees were planted
-    pub region: String,
+pub struct TokenData {
+    /// Current owner of the certificate
+    pub owner: Address,
+    /// Approved operator, if any
+    pub approved: Option<Address>,
+    /// URI pointing to the off-chain JSON metadata
+    pub uri: String,
 }
 
-/// NFT token record.
+/// Storage keys.
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct Token {
@@ -574,8 +571,8 @@ impl NftCertificate {
             .unwrap_or(0);
         let new_count = count.checked_add(1).expect("token count overflow");
         env.storage()
-            .instance()
-            .set(&symbol_short!("TOK_COUNT"), &new_count);
+            .persistent()
+            .set(&DataKey::Token(token_id.clone()), &token);
 
         contract_utils::ttl::bump_instance_ttl(&env);
 
@@ -849,26 +846,24 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Error(Contract, #10)")]
-    fn test_mint_zero_tree_count_rejected() {
-        let (env, _, client) = setup();
+    fn test_zero_tree_count_rejected() {
+        let (env, _, recipient, client) = setup();
 
-        let to = Address::generate(&env);
-        let token_id = 1;
-        let mut meta = metadata(&env, 100, 4800);
-        meta.tree_count = 0;
+        let id = token_id(&env);
+        let metadata = uri(&env);
+        let now = env.ledger().timestamp();
 
-        client.mint(&to, &token_id, &meta);
+        client.mint(&recipient, &id, &metadata, &0, &4800, &now);
     }
 
     #[test]
     #[should_panic(expected = "Error(Contract, #62)")]
-    fn test_mint_zero_co2_rejected() {
-        let (env, _, client) = setup();
+    fn test_zero_co2_offset_rejected() {
+        let (env, _, recipient, client) = setup();
 
-        let to = Address::generate(&env);
-        let token_id = 1;
-        let mut meta = metadata(&env, 100, 4800);
-        meta.co2_offset_kg = 0;
+        let id = token_id(&env);
+        let metadata = uri(&env);
+        let now = env.ledger().timestamp();
 
         client.mint(&to, &token_id, &meta);
     fn test_initialize_sets_defaults() {

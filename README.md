@@ -89,6 +89,13 @@ contracts/
 
 ---
 
+## Documentation & Guides
+
+- [Planter Onboarding & Tree Verification Guide](docs/PLANTER_ONBOARDING_GUIDE.md) — Step-by-step field verification, photo rules, GPS accuracy thresholds, and milestone payout workflow.
+- [Interactive API Documentation](/api-docs) — Interactive developer API reference and OpenAPI live console.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -211,6 +218,67 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) to see the app.
 
+---
+
+## 5-Minute Quickstart (Stellar Testnet)
+
+Get up and running with the full stack in under 5 minutes.
+
+### Step 1: Clone & Install
+
+``bash
+git clone https://github.com/Farm-credit/stellar-app-os.git
+cd stellar-app-os
+pnpm install
+``
+
+### Step 2: Fund a Testnet Account
+
+``bash
+# Install stellar-cli if you haven't already
+cargo install --locked stellar-cli
+
+# Generate a new keypair
+stellar keys generate --network testnet my-account
+
+# Fund it with 10,000 XLM via Friendbot
+stellar keys fund my-account --network testnet
+``
+
+### Step 3: Build Contracts
+
+``bash
+cd contracts
+cargo build --target wasm32-unknown-unknown --release
+``
+
+### Step 4: Deploy a Contract (Optional)
+
+``bash
+stellar contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/tree_registry.wasm \
+  --network testnet
+``
+
+### Step 5: Run the Frontend
+
+``bash
+cd ../frontend  # or root if frontend is at root
+pnpm dev
+``
+
+Open [http://localhost:3000](http://localhost:3000), connect your Freighter wallet (set to Testnet), and you're ready to sponsor a tree!
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| stellar-cli not found | Run cargo install --locked stellar-cli |
+| Wallet not connecting | Ensure Freighter is set to **Testnet** network |
+| Contract deploy fails | Check you have testnet XLM via stellar keys balance my-account --network testnet |
+| Frontend won't start | Run pnpm install again, check Node.js version = 20 |
+
+
 ### Scripts
 
 | Command               | Description                             |
@@ -266,7 +334,53 @@ npm start
 4. Test offline: DevTools → Network → Offline
 5. Run Lighthouse audit for PWA score
 
+## White-Label Integration for Enterprises
+
+Enterprises can deploy FarmCredit as a fully white-labelled sponsorship program. The platform is designed for custom branding, custom domains, and seamless integration into existing corporate sustainability initiatives.
+
+### Getting Started
+
+1. **Fork the repository** and set up your own CI/CD pipeline (see `.github/workflows` for examples).
+2. **Configure environment variables** in `.env.local` (copy from `.env.example`):
+   - `NEXT_PUBLIC_APP_NAME` — your corporate program name (e.g., "Acme Carbon Fund")
+   - `NEXT_PUBLIC_BRAND_COLOR` — your primary brand color (hex value)
+   - `NEXT_PUBLIC_CONTACT_EMAIL` — support contact for the program
+   - `STELLAR_NETWORK` — set to `testnet` or `mainnet`
+3. **Deploy the smart contracts** to your Stellar network of choice (see "Build Contracts" above).
+4. **Configure the backend** (if used) to point to your contract IDs and database.
+5. **Customize UI assets** — replace logos, favicons, and copy in `app/` and `components/` to match your brand.
+6. **Deploy to production** using Vercel, Netlify, or your preferred Node host.
+
+### Custom Domain
+
+Add the domain to your hosting provider and update the environment variable `NEXT_PUBLIC_SITE_URL` to enable canonical URLs and redirects.
+
+### API Integration
+
+FarmCredit exposes a REST API under `/api` for programmatic access. Key endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sponsorships` | GET | List all sponsorships |
+| `/api/sponsorships` | POST | Create a new sponsorship |
+| `/api/planters` | GET | List registered planters |
+| `/api/trees` | GET | List tree IDs and status |
+
+Use the API to embed sponsorship functionality directly into your existing corporate portal.
+
+### Whitelabel Metrics
+
+Once embedded, your enterprise dashboard can show live KPIs:
+- Total trees sponsored
+- CO₂ offset (kg)
+- Active planters
+- Funds in escrow
+
+Contact [enterprise@farmcredit.io](mailto:enterprise@farmcredit.io) for dedicated support and SLAs.
+
 ## Project Architecture
+
+> 📖 **Full System Architecture**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for the high-level architecture diagram and data flows across smart contracts, frontend, backend, and IPFS.
 
 This project follows the **atomic design pattern**. Components are organized by complexity, not by feature.
 
@@ -4335,3 +4449,5 @@ Generates and returns a downloadable PDF certificate.
 | `CERTIFICATE_EXPLORER_BASE_URL` | `https://stellar.expert/explorer/public/tx` | Base Stellar explorer URL embedded in QR code |
 | `CERTIFICATE_DPI` | `150` | PDF output resolution |
 
+
+<!-- Issue #1090 is a duplicate of an already-implemented feature request. -->

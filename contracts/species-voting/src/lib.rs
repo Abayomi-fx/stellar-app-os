@@ -144,7 +144,9 @@ impl SpeciesVoting {
             panic!("already initialized");
         }
         env.storage().instance().set(&admin_key(), &admin);
-        env.storage().instance().set(&tree_token_key(), &tree_token);
+        env.storage()
+            .instance()
+            .set(&tree_token_key(), &tree_token);
         env.storage()
             .instance()
             .set(&species_registry_key(), &species_registry);
@@ -154,7 +156,9 @@ impl SpeciesVoting {
         env.storage()
             .instance()
             .set(&voting_period_key(), &voting_period);
-        env.storage().instance().set(&proposal_count_key(), &0u64);
+        env.storage()
+            .instance()
+            .set(&proposal_count_key(), &0u64);
     }
 
     /// Propose a new species for addition to the catalogue.
@@ -187,7 +191,7 @@ impl SpeciesVoting {
             .instance()
             .get(&proposal_count_key())
             .unwrap_or(0);
-
+        
         let voting_period: u64 = env
             .storage()
             .instance()
@@ -208,7 +212,9 @@ impl SpeciesVoting {
             voting_ends_at: env.ledger().timestamp() + voting_period,
         };
 
-        env.storage().persistent().set(&proposal_key(id), &proposal);
+        env.storage()
+            .persistent()
+            .set(&proposal_key(id), &proposal);
         env.storage()
             .instance()
             .set(&proposal_count_key(), &(id + 1));
@@ -244,11 +250,7 @@ impl SpeciesVoting {
         }
 
         // Check if already voted
-        if env
-            .storage()
-            .persistent()
-            .has(&vote_key(proposal_id, &voter))
-        {
+        if env.storage().persistent().has(&vote_key(proposal_id, &voter)) {
             panic!("already voted on this proposal");
         }
 
@@ -258,9 +260,9 @@ impl SpeciesVoting {
             .instance()
             .get(&tree_token_key())
             .expect("not initialized");
-
+        
         let power = token::Client::new(&env, &tree_token).balance(&voter);
-
+        
         if power <= 0 {
             panic!("must hold TREE tokens to vote");
         }
@@ -403,7 +405,8 @@ impl SpeciesVoting {
         env.storage()
             .instance()
             .set(&voting_period_key(), &new_period);
-        env.events().publish((symbol_short!("period"),), new_period);
+        env.events()
+            .publish((symbol_short!("period"),), new_period);
     }
 
     // ── internal ──────────────────────────────────────────────────────────────
@@ -446,12 +449,12 @@ mod tests {
         let client = SpeciesVotingClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
-
+        
         // Deploy test TREE token
         let tree_token_id = env
             .register_stellar_asset_contract_v2(admin.clone())
             .address();
-
+        
         // Mock species registry address
         let species_registry = Address::generate(&env);
 
@@ -470,13 +473,14 @@ mod tests {
     fn test_propose_species() {
         let (env, admin, _, _, client) = setup();
 
+        let proposer = Address::generate(&env);
         let slug = Symbol::short("mahogany");
         let name = String::from_str(&env, "Mahogany");
 
         client.propose_species(&admin, &slug, &name, &2500_i128, &25_u32);
 
         assert_eq!(client.proposal_count(), 1);
-
+        
         let proposal = client.get_proposal(&0);
         assert_eq!(proposal.slug, slug);
         assert_eq!(proposal.name, name);
