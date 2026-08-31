@@ -36,6 +36,7 @@ members = [
     "species-catalog",
     "upgrade-timelock",
     "leaderboard",
+    "transparent-proxy",
 ]
 resolver = "2"
 

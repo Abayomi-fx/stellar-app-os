@@ -1,19 +1,19 @@
-/**
+/*
  * GET /api/compliance/reports
  * Generate compliance reports for carbon registry standards
- *
- * Query Parameters:
- * - type: project-registry | carbon-credits | tree-inventory | verification-audits | issuance-report | retirement-report
- * - format: csv | json | both
- * - registry: verra | gold-standard | car | plan-vivo | cdm | generic
- * - startDate: ISO 8601 date string (default: 30 days ago)
- * - endDate: ISO 8601 date string (default: now)
- * - projectIds: comma-separated project IDs
- * - sponsorAddresses: comma-separated sponsor addresses
- * - species: comma-separated species names
- * - regions: comma-separated region names
- * - status: comma-separated status values
- */
+*
+Query Parameters:
+ - type: project-registry | carbon-credits | tree-inventory | verification-audits | issuance-report | retirement-report
+ - format: csv | json | both
+ - registry: verra | gold-standard | car | plan-vivo | cdm | generic
+ - startDate: ISO 8601 date string (default: 30 days ago)
+ - endDate: ISO 8601 date string (default: now)
+ - projectIds: comma-separated project IDs
+ - sponsorAddresses: comma-separated sponsor addresses
+ - species: comma-separated species names
+ - regions: comma-separated region names
+ - status: comma-separated status values
+*/
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -50,12 +50,7 @@ export async function GET(request: NextRequest) {
   const format = (searchParams.get('format') as 'csv' | 'json' | 'both') || 'json';
   const registry =
     (searchParams.get('registry') as
-      | 'verra'
-      | 'gold-standard'
-      | 'car'
-      | 'plan-vivo'
-      | 'cdm'
-      | 'generic') || 'verra';
+      'verra' | 'gold-standard' | 'car' | 'plan-vivo' | 'cdm' | 'generic') || 'verra';
 
   const startDate = parseDateParam(
     searchParams.get('startDate'),
@@ -81,7 +76,7 @@ export async function GET(request: NextRequest) {
     const generator = getComplianceReportGenerator();
     const response = await generator.generateReport(
       reportType,
-      format,
+      format === 'both' ? 'json' : format,
       registry,
       { startDate, endDate },
       filters
@@ -148,7 +143,7 @@ export async function POST(request: NextRequest) {
     const generator = getComplianceReportGenerator();
     const response = await generator.generateReport(
       type,
-      format,
+      format === 'both' ? 'json' : (format as 'csv' | 'json'),
       registry,
       {
         startDate: startDate

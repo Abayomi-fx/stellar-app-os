@@ -8,7 +8,7 @@
  * Path params:
  *   sponsor  — Stellar public key (G… 56-char base32)
  * Query params:
- *   status   — optional; one of All, Pending, Planted, Verified, Failed
+ *   status   ℔ optional; one of All, Pending, Planted, Verified, Failed
  *
  * Query params (optional):
  *   lat, lon — approximate user coordinates. When provided, each tree in the
@@ -48,16 +48,16 @@ function haversineDistance(
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    Math.sin(dLat / 2) **2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) **2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return EARTH_RADIUS_KM * c;
 }
 
 export async function GET(
   request: NextRequest,
-  { params : { params: Promise<{ sponsor: string }> }
-}) {
+  { params }: { params: Promise<{ sponsor: string }> }
+) {
   try {
     const { sponsor: rawSponsor } = await params;
     const sponsor = rawSponsor?.trim() ?? '';
@@ -68,7 +68,7 @@ export async function GET(
 
     if (!isValidStellarAddress(sponsor)) {
       return NextResponse.json(
-        { error: 'Invalid Stellar address — must be a 56-character G\u2026 public key' },
+        { error: 'Invalid Stellar address — must be a 56-character G… public key' },
         { status: 400 }
       );
     }
@@ -86,7 +86,7 @@ export async function GET(
       );
     }
 
-    const requestedStatus = _request.nextUrl.searchParams.get('status');
+    const requestedStatus = searchParams.get('status');
     const rawStatus = requestedStatus?.trim() ?? '';
 
     const allowedStatuses = new Set(['all', 'pending', 'planted', 'verified', 'failed']);
@@ -98,9 +98,10 @@ export async function GET(
     }
 
     const filterStatus = rawStatus.toLowerCase() === 'all' ? '' : rawStatus.toLowerCase();
+    // Analytics queries are heavy — use the read replica to avoid blocking production writes.
     const impact = filterStatus
-      ? await getSponsorImpact(sponsor, filterStatus)
-      : await getSponsorImpact(sponsor);
+      ? await getSponsorImpact(sponsor, filterStatus, { readReplica: true })
+      : await getSponsorImpact(sponsor, undefined, { readReplica: true });
 
     if (lat !== null && lon !== null) {
       if (Array.isArray(impact.trees)) {
@@ -121,7 +122,7 @@ export async function GET(
 
     return NextResponse.json(impact, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=10',
+        'Cache-Control': 'public, smaxage=30, stale-while-revalidate=10',
         'X-Cached-At': impact.cachedAt,
       },
     });
