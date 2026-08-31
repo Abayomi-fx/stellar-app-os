@@ -69,7 +69,18 @@ export async function GET(request: Request) {
  * In production, this should generate actual PDF forms and store them securely.
  */
 async function generate1099Forms(pool: any) {
-  const result = await pool.query(`\n    SELECT \n      s.id AS sponsor_id,\n      s.name,\n      s.email,\n      SUM(sp.amount) AS total_annual\n    FROM sponsors s\n    JOIN sponsorships sp ON sp.sponsor_id = s.id\n    WHERE sp.created_at >= NOW() - INTERVAL '1 year'\n    GROUP BY s.id, s.name, s.email\n    HAVING SUM(sp.amount) > 20000\n  `);
+  const result = await pool.query(`
+    SELECT 
+      s.id AS sponsor_id,
+      s.name,
+      s.email,
+      SUM(sp.amount) AS total_annual
+    FROM sponsors s
+    JOIN sponsorships sp ON sp.sponsor_id = s.id
+    WHERE sp.created_at >= NOW() - INTERVAL '1 year'
+    GROUP BY s.id, s.name, s.email
+    HAVING SUM(sp.amount) > 20000
+  `);
   const sponsors = result.rows;
   return sponsors.map((sponsor: any) => ({ sponsor_id, name, email, total_annual: Number(sponsor.total_annual), tax_form: '1099', generated_at: new Date().toISOString() }));
 }
