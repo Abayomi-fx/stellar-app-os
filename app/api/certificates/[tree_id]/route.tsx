@@ -7,6 +7,20 @@ import { TREE_SPECIES } from '@/lib/constants/species';
 
 export const runtime = 'nodejs';
 
+const ALLOWED_ORIGINS = new Set(
+  (process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
+
+function isWhitelistedOrigin(origin: string | null): boolean {
+  return origin !== null && ALLOWED_ORIGINS.has(origin);
+}
+
+// In-memory tombstone set for GDPR right-to-be-forgotten deletions.
+const gdprDeletedTreeIds = new Set<string>();
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const S = StyleSheet.create({
@@ -280,6 +294,25 @@ function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
 
 // ── Route Handler ─────────────────────────────────────────────────────────────
 
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  const origin = request.headers.get('origin');
+
+  if (!origin || !isWhitelistedOrigin(origin)) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': request.headers.get('access-control-request-headers') ?? 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+      Vary: 'Origin',
+    },
+  });
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ tree_id: string }> }
@@ -290,6 +323,10 @@ export async function GET(
   const tree = trees.find((t) => t.id === tree_id || t.treeId === tree_id);
 
   if (!tree) {
+    return NextResponse.json({ error: 'Tree not found' }, { status: 404 });
+  }
+
+  if (gdprDeletedTreeIds.has(tree.treeId)) {
     return NextResponse.json({ error: 'Tree not found' }, { status: 404 });
   }
 
@@ -327,6 +364,35 @@ export async function GET(
     day: 'numeric',
   });
 
+  const wantsJsonExport = Boolean(
+    _request.nextUrl.searchParams.get('export') === 'json' ||
+      _request.nextUrl.searchParams.get('format') === 'json' ||
+      _request.headers.get('accept')?.includes('application/json')
+  );
+
+  if (wantsJsonExport) {
+    return NextResponse.json(
+      {
+        personalData: {
+          treeId: tree.treeId,
+          species: tree.species,
+          region: tree.region,
+          projectName: tree.projectName,
+          plantedAt,
+          co2Tonnes,
+          distanceFromSponsor: distanceFromSponsor ?? null,
+          treeUrl,
+          issuedDate,
+          queriedCoordinates: {
+            latitude: sponsorLat ?? null,
+            longitude: sponsorLng ?? null,
+          },
+        },
+      },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
   const pdfBuffer = await renderToBuffer(
     <TreeCertificate
       treeUid={tree.treeId}
@@ -348,5 +414,28 @@ export async function GET(
       'Content-Disposition': `attachment; filename="certificate-${tree.treeId}.pdf"`,
       'Cache-Control': 'no-store',
     },
+  });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ tree_id: string }> }
+): Promise<NextResponse> {
+  const { tree_id } = await params;
+
+  const trees = getMockTrees();
+  const treeIndex = trees.findIndex((t) => t.id === tree_id || t.treeId === tree_id);
+
+  if (treeIndex === -1) {
+    return NextResponse.json({ error: 'Tree not found' }, { status: 404 });
+  }
+
+  const [tree] = trees.splice(treeIndex, 1);
+
+  gdprDeletedTreeIds.add(tree.treeId);
+
+  return NextResponse.json({
+    status: 'ok',
+    message: `User data associated with certificate ${tree.treeId} has been deleted.`,
   });
 }
