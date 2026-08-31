@@ -89,6 +89,13 @@ contracts/
 
 ---
 
+## Documentation & Guides
+
+- [Planter Onboarding & Tree Verification Guide](docs/PLANTER_ONBOARDING_GUIDE.md) — Step-by-step field verification, photo rules, GPS accuracy thresholds, and milestone payout workflow.
+- [Interactive API Documentation](/api-docs) — Interactive developer API reference and OpenAPI live console.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
