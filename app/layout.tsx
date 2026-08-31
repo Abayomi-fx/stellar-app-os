@@ -8,6 +8,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { WalletProvider } from '@/contexts/WalletContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { TimeZoneProvider } from '@/contexts/TimeZoneContext';
+import { CurrencyProvider } from '@/contexts/CurrencyContext';
 import {
   NotificationCenterDrawer,
   ToastContainer,
