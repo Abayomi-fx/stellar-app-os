@@ -84,6 +84,7 @@
     "react-leaflet": "^5.0.0",
     "recharts": "^3.8.1",
     "redis": "^5.10.0",
+    "rate-limiter-flexible": "^5.0.3",
     "snarkjs": "^0.7.5",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
