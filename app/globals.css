@@ -345,3 +345,14 @@ html.no-transitions *::after {
     0 0 0 1px var(--glass-selected-border);
 }
 }
+
+/* ===== MOBILE ANDROID VIEWPORT & SAFE AREA HELPERS ===== */
+@supports (min-height: 100dvh) {
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

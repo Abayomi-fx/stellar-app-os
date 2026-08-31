@@ -85,7 +85,7 @@ export function Footer(): React.ReactNode {
 
   return (
     <footer
-      className="bg-stellar-navy text-foreground border-t border-cyan-500/10 mt-16 px-6 py-12 md:py-10 sm:px-4"
+      className="bg-stellar-navy text-foreground border-t border-cyan-500/10 mt-auto flex-shrink-0 w-full px-6 py-12 md:py-10 sm:px-4 pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
       role="contentinfo"
     >
       <div className="max-w-6xl mx-auto">
