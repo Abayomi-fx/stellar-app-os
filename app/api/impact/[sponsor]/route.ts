@@ -50,8 +50,8 @@ function haversineDistance(
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    Math.sin(dLat / 2) **2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) **2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return EARTH_RADIUS_KM * c;
 }
@@ -63,7 +63,7 @@ async function getXlmPriceInUsd(): Promise<number> {
       'https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=usd'
     );
     const data = await response.json();
-    return data.stellar?.usd ?> fallbackRate;
+    return data.stellar?.usd ?? fallbackRate;
   } catch {
     return fallbackRate;
   }
@@ -104,7 +104,7 @@ export async function GET(
     const rawStatus = searchParams.get('status')?.trim() ?? '';
 
     const allowedStatuses = new Set(['all', 'pending', 'planted', 'verified', 'failed']);
-    if (rawStatus && !allowedStatuses.hasrawStatus.toLowerCase())) {
+    if (rawStatus && !allowedStatuses.has(rawStatus.toLowerCase())) {
       return NextResponse.json(
         { error: 'Invalid status filter — must be one of: All, Pending, Planted, Verified, Failed' },
         { status: 400 }
@@ -112,9 +112,10 @@ export async function GET(
     }
 
     const filterStatus = rawStatus.toLowerCase() === 'all' ? '' : rawStatus.toLowerCase();
+    // Analytics queries are heavy — use the read replica to avoid blocking production writes.
     const impact = filterStatus
-      ? await getSponsorImpact(sponsor, filterStatus)
-      : await getSponsorImpact(sponsor);
+      ? await getSponsorImpact(sponsor, filterStatus, { readReplica: true })
+      : await getSponsorImpact(sponsor, undefined, { readReplica: true });
 
     if (lat !== null && lon !== null) {
       if (Array.isArray(impact.trees)) {
@@ -135,7 +136,7 @@ export async function GET(
 
     return NextResponse.json(impact, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=10',
+        'Cache-Control': 'public, smaxage=30, stale-while-revalidate=10',
         'X-Cached-At': impact.cachedAt,
       },
     });
@@ -191,7 +192,7 @@ export async function POST(
       automatic_payment_methods: { enabled: true },
       metadata: {
         sponsor,
-        xmlAmount: xlmAmount.to!ixed(7),
+        xmlAmount: xlmAmount.toFixed(7),
       },
     });
 
