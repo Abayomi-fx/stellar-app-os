@@ -25,11 +25,35 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getSponsorImpact, isValidStellarAddress } from '@/lib/api/carbon-impact';
+import { isValidStellarAddress, listBySponsor } from '@/lib/api/carbon-impact';
 
 export const runtime = 'nodejs';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+interface Tree {
+  species?: string;
+  co2Offset?: number;
+  status?: string;
+  location?: {
+    lat: number | null;
+    lon: number | null;
+  };
+  distanceKm?: number;
+}
+
+interface SponsorImpact {
+  totalCo2Offset: number;
+  treeCount: number;
+  perSpecies: Record<string, number>;
+  cachedAt: string;
+  trees?: Tree[];
+  location?: {
+    lat: number | null;
+    lon: number | null;
+  };
+  distanceKm?: number;
+}
 
 const EARTH_RADIUS_KM = 6371;
 const toRad = (value: number) => (value * Math.PI) / 180;
@@ -112,10 +136,37 @@ export async function GET(
     }
 
     const filterStatus = rawStatus.toLowerCase() === 'all' ? '' : rawStatus.toLowerCase();
-    // Analytics queries are heavy — use the read replica to avoid blocking production writes.
-    const impact = filterStatus
-      ? await getSponsorImpact(sponsor, filterStatus, { readReplica: true })
-      : await getSponsorImpact(sponsor, undefined, { readReplica: true });
+
+    // Aggregate all trees for the sponsor, handling pagination for large datasets.
+    let cursor: string | null = null;
+    const trees: Tree[] = [];
+    const perSpecies: Record<string, number> = {};
+    let totalCo2Offset = 0;
+    let treeCount = 0;
+
+    do {
+      const page = await listBySponsor(sponsor, cursor);
+      for (const tree of page.trees ?? []) {
+        const treeItem = tree as Tree;
+        if (filterStatus && treeItem.status?.toLowerCase() !== filterStatus) {
+          continue;
+        }
+        trees.push(treeItem);
+        treeCount += 1;
+        totalCo2Offset += treeItem.co2Offset ?? 0;
+        const species = treeItem.species ?? 'Unknown';
+        perSpecies[species] = (perSpecies[species] ?? 0) + 1;
+      }
+      cursor = page.nextCursor ?? null;
+    } while (cursor);
+
+    const impact: SponsorImpact = {
+      totalCo2Offset,
+      treeCount,
+      perSpecies,
+      cachedAt: new Date().toISOString(),
+      trees,
+    };
 
     if (lat !== null && lon !== null) {
       if (Array.isArray(impact.trees)) {
