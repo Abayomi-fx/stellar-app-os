@@ -4442,3 +4442,5 @@ Generates and returns a downloadable PDF certificate.
 | `CERTIFICATE_EXPLORER_BASE_URL` | `https://stellar.expert/explorer/public/tx` | Base Stellar explorer URL embedded in QR code |
 | `CERTIFICATE_DPI` | `150` | PDF output resolution |
 
+
+<!-- Issue #1090 is a duplicate of an already-implemented feature request. -->
