@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { getPool } from '@/lib/db/client';
 import {
   getCohortRetentionReport,
@@ -7,6 +8,7 @@ import {
 } from '@/lib/analytics/sponsor-cohort-retention';
 
 export const runtime = 'nodejs';
+
 export const dynamic = 'force-dynamic';
 
 /**
@@ -15,14 +17,16 @@ export const dynamic = 'force-dynamic';
  * Returns the sponsor cohort retention matrix.
  *
  * Query params:
- *   from       — filter cohorts from this month (YYYY-MM)
- *   to         — filter cohorts up to this month (YYYY-MM)
- *   max_periods — max period offsets to include (default 12)
- *   wallet     — if provided, returns a single sponsor's retention summary instead
+ *   from       \u2014 filter cohorts from this month (YYYY-MM)
+ *   to         \u2014 filter cohorts up to this month (YYYY-MM)
+ *   max_periods \u2014 max period offsets to include (default 12)
+ *   wallet     \u2014 if provided, returns a single sponsor's retention summary instead
+ *   payment_method \u2014 optional filter by payment method (e.g. 'xlm' for Stellar)
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const wallet = url.searchParams.get('wallet');
+  const paymentMethod = url.searchParams.get('payment_method') ?? undefined;
 
   try {
     if (wallet) {
@@ -47,6 +51,7 @@ export async function GET(request: Request) {
       from,
       to,
       max_periods: maxPeriods && maxPeriods > 0 ? maxPeriods : undefined,
+      payment_method: paymentMethod,
     });
 
     return NextResponse.json(report, {
@@ -58,14 +63,41 @@ export async function GET(request: Request) {
   }
 }
 
+/***
+ * Generates IRS 1099 forms for sponsors with >$20k annual sponsorships.
+ * This is a placeholder implementation that returns the list of eligible sponsors.
+ * In production, this should generate actual PDF forms and store them securely.
+ */
+async function generate1099Forms(pool: any) {
+  const result = await pool.query(`\n    SELECT \n      s.id AS sponsor_id,\n      s.name,\n      s.email,\n      SUM(sp.amount) AS total_annual\n    FROM sponsors s\n    JOIN sponsorships sp ON sp.sponsor_id = s.id\n    WHERE sp.created_at >= NOW() - INTERVAL '1 year'\n    GROUP BY s.id, s.name, s.email\n    HAVING SUM(sp.amount) > 20000\n  `);
+  const sponsors = result.rows;
+  return sponsors.map((sponsor: any) => ({ sponsor_id, name, email, total_annual: Number(sponsor.total_annual), tax_form: '1099', generated_at: new Date().toISOString() }));
+}
+
 /**
  * POST /api/admin/analytics/sponsor-cohort
  *
- * Trigger a cohort retention refresh (recomputes the snapshot table).
- * Should be called by a monthly cron job or on-demand.
+ * Triggers a cohort retention refresh (recomputes the snapshot table)
+ * or generates 1099 forms for high-value sponsors.
+ *
+ * Query params:
+ *   action \u2014 optional. Set to 'generate_1099' to generate tax forms.
+ *           If omitted, the default cohort refresh is performed.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action');
+
   try {
+    if (action === 'generate_1099') {
+      const forms = await generate1099Forms(getPool());
+      return NextResponse.json({
+        success: true,
+        forms_generated: forms.length,
+        forms,
+      });
+    }
+
     const result = await refreshCohortRetention(getPool());
     return NextResponse.json({
       success: true,
@@ -74,7 +106,7 @@ export async function POST() {
       generated_at: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[sponsor-cohort] POST refresh error', error);
-    return NextResponse.json({ error: 'Failed to refresh cohort retention data' }, { status: 500 });
+    console.error('[sponsor-cohort] POST error', error);
+    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }
