@@ -39,6 +39,8 @@ interface PendingDigest {
   totalCo2Kg: number;
   newUpdates: number;
   topSpecies: string;
+  photoUrls: string[];
+  communityHighlights: string[];
   generatedAt: string;
 }
 
@@ -147,7 +149,7 @@ export class EmailDigestWorker extends BaseWorker {
       await client.query('BEGIN');
       await client.query(`DECLARE ${this.cursorName} NO SCROLL CURSOR FOR
         SELECT id, user_id, user_email, digest_type, tree_count,
-               total_co2_kg, new_updates, top_species, generated_at
+               total_co2_kg, new_updates, top_species, photo_urls, community_highlights, generated_at
         FROM email_digests
         WHERE status = 'pending'
         ORDER BY generated_at ASC
@@ -171,6 +173,8 @@ export class EmailDigestWorker extends BaseWorker {
         totalCo2Kg: row.total_co2_kg,
         newUpdates: row.new_updates,
         topSpecies: row.top_species,
+        photoUrls: Array.isArray(row.photo_urls) ? row.photo_urls : [],
+        communityHighlights: Array.isArray(row.community_highlights) ? row.community_highlights : [],
         generatedAt: row.generated_at,
       }));
     } catch (err) {
@@ -295,6 +299,8 @@ export class EmailDigestWorker extends BaseWorker {
               Your top species this period is <strong>${digest.topSpecies}</strong>.
               Thank you for helping sequester carbon and support local farmers!
             </p>
+            ${digest.communityHighlights.length > 0 ? `<h3>Community highlights</h3><ul>${digest.communityHighlights.map((highlight) => `<li>${highlight}</li>`).join('')}</ul>` : ''}
+            ${digest.photoUrls.length > 0 ? `<h3>Tree progress photos</h3>${digest.photoUrls.map((photoUrl) => `<img src="${photoUrl}" alt="Tree progress photo" style="max-width:100%;border-radius:8px;margin:4px 0;"/>`).join('')}` : ''}
           </div>
           <div class="footer">
             <p>Harvesta — Plant Trees. Track Impact. Offset Carbon.</p>
