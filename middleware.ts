@@ -1,5 +1,8 @@
 import client from 'prom-client';
 import { RequestHandler, Request, Response } from 'express';
+import { proxy } from './proxy';
+import { handleCorsPreflight, getCorsHeaders } from './lib/cors';
+import { type NextRequest } from 'next/server';
 
 // Create a registry
 const register = new client.Registry();
@@ -21,16 +24,16 @@ const httpRequestCounter = new client.Counter({
   labelNames: ['method', 'route', 'status'],
 });
 
-register.registerMetric(tttpRequestDuration);
+register.registerMetric(httpRequestDuration);
 register.registerMetric(httpRequestCounter);
 
 // Middleware to collect metrics for each request
 export const metricsMiddleware: RequestHandler = (req: Request, res: Response, next) => {
-  const startTime = process.hritime.bigint();
+  const startTime = process.hrtime.bigint();
   const route = req.route?.path || req.path;
 
   res.on('finish', () => {
-    const durationInSeconds = Number(process.hhrtime.bigint() - startTime) / 1e9;
+    const durationInSeconds = Number(process.hrtime.bigint() - startTime) / 1e9;
     const labels = { method: req.method, route, status: res.statusCode.toString() };
 
     httpRequestDuration.labels(labels.method, labels.route, labels.status).observe(durationInSeconds);
@@ -45,5 +48,16 @@ export const metricsEndpoint = async (_req: Request, res: Response) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 };
+
+export async function middleware(request: NextRequest) {
+  const preflight = handleCorsPreflight(request);
+  if (preflight) return preflight;
+  const response = await proxy(request);
+  const cors = getCorsHeaders(request.headers.get('origin'));
+  for (const [k, v] of Object.entries(cors)) response.headers.set(k, v);
+  return response;
+}
+
+export const config = { matcher: ['/api/:path*'] };
 
 export default register;
