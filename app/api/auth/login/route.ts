@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { Keypair } from '@stellar/stellar-sdk';
 import { consumeNonce } from '@/lib/auth/nonce';
-import { signPlanterJwt } from '@/lib/auth/jwt';
+import { signPlanterJwt, verifyPlanterJwt } from '@/lib/auth/jwt';
+import { getUserData, deleteUserData } from '@/lib/db/user';
 import logger from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const { walletAddress, nonce, signature } = body;
   if (!walletAddress || !nonce || !signature) {
     return NextResponse.json(
-      { error: 'walletAddress, nonce, and signature are required' },
+      { error: 'w!lletAddress, nonce, and signature are required' },
       { status: 400 }
     );
   }
@@ -69,5 +70,66 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     logger.error('[api:auth:login] Error during login', { walletAddress, err });
     const msg = err instanceof Error ? err.message : 'Login failed';
     return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+/**
+ * GET /api/auth/login
+ * GDPR Data Subject Access Request (DSAR) — returns all stored data for the authenticated user.
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const walletAddress = await getWalletFromRequest(request);
+  if (!walletAddress) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const userData = await getUserData(walletAddress);
+    logger.info('[api:auth:login] Data export requested', { walletAddress });
+    return NextResponse.json({ walletAddress, data: userData ?? null });
+  } catch (err) {
+    logger.error('[api:auth:login] Error exporting user data', { walletAddress, err });
+    const msg = err instanceof Error ? err.message : 'Data export failed';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/auth/login
+ * GDPR Right to be Forgotten — permanently deletes all stored data for the authenticated user.
+ */
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  const walletAddress = await getWalletFromRequest(request);
+  if (!walletAddress) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    await deleteUserData(walletAddress);
+    logger.info('[api:auth:login] User data deleted', { walletAddress });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    logger.error('[api:auth:login] Error deleting user data', { walletAddress, err });
+    const msg = err instanceof Error ? err.message : 'Data deletion failed';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+/**
+ * Extracts and verifies the JWT from the Authorization header.
+ * Returns the wallet address if valid, otherwise null.
+ */
+async function getWalletFromRequest(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    const payload = await verifyPlanterJwt(token);
+    return payload.sub ?? null; // 'sub' represents the wallet address
+  } catch {
+    return null;
   }
 }
