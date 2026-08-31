@@ -1,18 +1,19 @@
-# Bug Bounty Program
+# HackerOne Bug Bounty Program
 
 ## Overview
 
-Harvesta operates a bug bounty program on [Immunefi](https://immunefi.com/) to incentivize security researchers to identify vulnerabilities in our smart contracts and infrastructure. This program helps us maintain the highest security standards for our decentralized tree-planting platform.
+Harvesta also operates a bug bounty program on [HackerOne](https://www.hackerone.com/) to broaden responsible-disclosure coverage for our decentralized tree-planting platform. HackerOne provides an independent, trusted channel for security researchers to report vulnerabilities in our smart contracts and infrastructure, with tiered rewards and a structured triage process.
 
-> We also run a complementary [HackerOne bug bounty program](HACKERONE_BUG_BOUNTY.md). Researchers may report qualifying vulnerabilities through either platform.
+> This program is complementary to our [Immunefi program](BUG_BOUNTY.md). Researchers may report qualifying vulnerabilities through either platform.
 
 ## Program Details
 
-- **Platform**: Immunefi
+- **Platform**: HackerOne
 - **Status**: Active
 - **Launch Date**: TBD
 - **Reward Pool**: $50,000 USD (initial)
-- **Payout Currency**: USDC (Stellar) or USD via Immunefi
+- **Payout Currency**: USDC (Stellar) or USD via HackerOne
+- **Program Handle**: `stellar-app-os` (subject to final handle on HackerOne)
 
 ## Scope
 
@@ -126,7 +127,16 @@ All Soroban smart contracts deployed on Stellar mainnet and testnet:
 - Vulnerabilities in Stellar network itself
 - Vulnerabilities in IPFS/Pinata services
 
-## Severity Levels & Rewards
+## Severity Levels & Tiered Rewards
+
+| Severity | Reward |
+|---|---|
+| Critical | Up to $25,000 |
+| High | Up to $15,000 |
+| Medium | Up to $5,000 |
+| Low | Up to $1,000 |
+
+Rewards are tiered by severity and paid out for validated, in-scope findings only. Duplicate or out-of-scope reports are not rewarded.
 
 ### Critical (Up to $25,000)
 
@@ -161,6 +171,14 @@ All Soroban smart contracts deployed on Stellar mainnet and testnet:
 
 ## Submission Guidelines
 
+### How to Submit
+
+1. Visit [HackerOne](https://www.hackerone.com/)
+2. Search for our program handle (`stellar-app-os` — "Harvesta" / "Stellar App OS")
+3. Click **Submit Report** and follow the in-platform template
+4. Include all required information (below)
+5. Mark reports as `Security` and keep them private
+
 ### What to Include
 
 1. **Vulnerability Description**
@@ -180,18 +198,22 @@ All Soroban smart contracts deployed on Stellar mainnet and testnet:
    - Code changes if applicable
    - Testing recommendations
 
-### How to Submit
-
-1. Visit [Immunefi](https://immunefi.com/)
-2. Search for "Harvesta" or "Stellar App OS"
-3. Submit vulnerability through the platform
-4. Include all required information
-
 ### Response Time
 
 - **Initial Response**: Within 48 hours
 - **Triage**: Within 7 days
 - **Resolution**: Within 30 days (depending on severity)
+
+## Triage Process
+
+1. **Submission**: Researcher submits a report through HackerOne
+2. **Initial Review**: Security team responds within 48 hours
+3. **Triage**: Team categorizes the report by severity and validates it within 7 days
+4. **Reproduction**: Team reproduces and validates the vulnerability
+5. **Fix**: Development team implements the fix
+6. **Verification**: Security team verifies the fix
+7. **Payout**: Reward is processed through HackerOne
+8. **Disclosure**: Vulnerability is disclosed (with researcher consent)
 
 ## Rules of Engagement
 
@@ -221,45 +243,36 @@ Harvesta commits to:
 - **Credit**: We will publicly acknowledge valid bug reports (with researcher consent)
 - **Payment**: We will pay rewards for valid vulnerabilities according to the severity scale
 
-## Reward Payout Process
-
-1. **Submission**: Researcher submits vulnerability through Immunefi
-2. **Triage**: Security team reviews and categorizes the report
-3. **Validation**: Team reproduces and validates the vulnerability
-4. **Fix**: Development team implements the fix
-5. **Verification**: Security team verifies the fix
-6. **Payout**: Reward is processed through Immunefi
-7. **Disclosure**: Vulnerability is disclosed (with researcher consent)
-
 ## Recognition
 
 Valid vulnerability submissions will be acknowledged in:
 
 - Our security hall of fame
+- HackerOne leaderboard / acknowledgments
 - Release notes for affected versions
 - Annual security reports
-- Immunefi leaderboard (if applicable)
 
 ## Contact
 
-For questions about the bug bounty program:
+For questions about the HackerOne bug bounty program:
 
 - **Email**: security@harvesta.io
-- **Immunefi**: [Harvesta Program](https://immunefi.com/)
-- **GitHub**: [Security Issues](https://github.com/Kenlachy/stellar-app-os/security)
+- **HackerOne**: [Program page](https://www.hackerone.com/)
+- **GitHub**: [Security Issues](https://github.com/Farm-credit/stellar-app-os/security)
+- **Immunefi**: [Immunefi program](BUG_BOUNTY.md)
 
 ## Program Updates
 
 This program may be updated at any time. Changes will be announced:
 
 - On this page
-- Through Immunefi platform
+- Through HackerOne platform
 - On our social media channels
 - Via email to registered researchers
 
 ## Additional Resources
 
-- [Immunefi Guidelines](https://docs.immunefi.com/)
+- [HackerOne Disclosure Guidelines](https://www.hackerone.com/disclosure-guidelines)
 - [Stellar Security Best Practices](https://developers.stellar.org/docs/security/)
 - [Soroban Security Guide](https://soroban.stellar.org/docs/learn/security/)
 - [OWASP Smart Contract Top 10](https://owasp.org/www-project-smart-contract-top-10/)
