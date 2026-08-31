@@ -639,12 +639,10 @@ export function TreeDonationForm() {
                   stellar="primary"
                   width="full"
                   onClick={handleStellarPay}
-                  disabled={!isValidCount || isStellarProcessing || !hasSufficientStellar}
                   aria-label={`Donate ${totalUsdc.toFixed(2)} USDC via Stellar paying with ${donationAsset}`}
                   disabled={
                     !isValidCount || !isValidGift || isStellarProcessing || !hasSufficientStellar
                   }
-                  aria-label={`Donate ${totalUsdc.toFixed(2)} USDC via Stellar`}
                 >
                   {isStellarProcessing ? (
                     <span className="flex items-center gap-2">

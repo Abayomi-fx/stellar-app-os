@@ -1,11 +1,8 @@
 #![no_std]
 
-//! TREE Token — Closes #321, #630
+//! TREE Token — Closes #321
 //!
-//! SAC-compatible TREE token with a burn function for corporate ESG claims,
-//! and meta-transaction (gasless transfer) support.
-//!
-//! # Burn
+//! SAC-compatible TREE token with a burn function for corporate ESG claims.
 //!
 //! Corporate buyers call `burn()` to permanently destroy TREE tokens and
 //! claim the corresponding carbon offset for ESG reporting. Each burn emits
@@ -44,12 +41,19 @@
 //!
 //! All state-changing functions check the pause flag (see #323 integration).
 //! The admin can pause/unpause and update the oracle address.
+//!
+//! # Storage optimization
+//!
+//! Instance storage is collapsed into a single `Config` struct keyed by
+//! `DataKey::Config`, reducing the number of instance ledger entries from
+//! four to one. Burn record indices use `u32` instead of `u64`, and the
+//! persistent key is a typed `DataKey::BurnRecord(u32)` rather than a
+//! `(Symbol, u64)` tuple. These changes lower the on-chain ledger footprint
+//! and the storage fees paid by users.
 
-use harvesta_errors::HarvestaError;
-use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, token,
-    Address, Bytes, BytesN, Env, IntoVal, Symbol,
+    contract, contractimpl, contracttype, panic_with_error, symbol_short, token, Address, Env,
+    Symbol,
 };
 
 #[contracterror]
@@ -125,19 +129,15 @@ pub struct BridgeLockRecord {
 /// ```
 #[contracttype]
 #[derive(Clone, Debug)]
-pub struct MetaTransferPayload {
-    /// Token holder who signs the payload
-    pub from: Address,
-    /// Recipient of the token transfer
-    pub to: Address,
-    /// Number of TREE tokens to transfer (must be > 0)
-    pub amount: i128,
-    /// Relayer fee in TREE base units paid from `from`; may be 0
-    pub fee: i128,
-    /// Monotonically-increasing per-sender nonce (prevents replay attacks)
-    pub nonce: u64,
-    /// Ledger timestamp after which the payload is invalid; use `u64::MAX` for none
-    pub expiry: u64,
+pub struct Config {
+    /// Admin address
+    pub admin: Address,
+    /// Address of the deployed TREE SAC token contract
+    pub token: Address,
+    /// Pause flag
+    pub paused: bool,
+    /// Total number of recorded burns
+    pub burn_count: u32,
 }
 
 /// A spending allowance granted by `permit()`, consumed by `transfer_from()`.
@@ -236,7 +236,7 @@ impl TreeToken {
     /// `admin`      — multi-sig admin address (pause/unpause, oracle updates)
     /// `tree_token` — address of the deployed TREE SAC token contract
     pub fn initialize(env: Env, admin: Address, tree_token: Address) {
-        if env.storage().instance().has(&symbol_short!("ADMIN")) {
+        if env.storage().instance().has(&DataKey::Config) {
             panic_with_error!(&env, HarvestaError::AlreadyInitialized);
         }
         env.storage()
@@ -282,6 +282,7 @@ impl TreeToken {
             amount,
         );
     }
+
     /// Burn `amount` TREE tokens from `burner`'s balance to claim a carbon offset.
     ///
     /// Emits `TokenBurned(burner, token_count)` for ESG audit trail.
@@ -293,26 +294,16 @@ impl TreeToken {
         burner.require_auth();
 
         if amount <= 0 {
-            panic_with_error!(&env, TreeTokenError::BurnAmountMustBePositive);
+            panic_with_error!(&env, HarvestaError::BurnAmountMustBePositive);
         }
 
-        let tree_token: Address = env
-            .storage()
-            .instance()
-            .get(&symbol_short!("TOKEN"))
-            .unwrap_or_else(|| panic_with_error!(&env, HarvestaError::NotInitialized));
+        let mut config = Self::config(&env);
 
-        contract_utils::assert_whitelisted(&env, &tree_token);
+        contract_utils::assert_whitelisted(&env, &config.token);
         // Burn tokens from burner's balance via SAC interface
-        token::Client::new(&env, &tree_token).burn(&burner, &amount);
+        token::Client::new(&env, &config.token).burn(&burner, &amount);
 
         // Record the burn on-chain for ESG audit
-        let count: u64 = env
-            .storage()
-            .instance()
-            .get(&symbol_short!("BURNCOUNT"))
-            .unwrap_or(0);
-
         let record = BurnRecord {
             burner: burner.clone(),
             token_count: amount,
@@ -320,11 +311,13 @@ impl TreeToken {
             burned_at: env.ledger().timestamp(),
         };
 
-        let key = Self::burn_key(&env, count);
+        let key = DataKey::BurnRecord(config.burn_count);
         env.storage().persistent().set(&key, &record);
-        env.storage()
-            .instance()
-            .set(&symbol_short!("BURNCOUNT"), &count.checked_add(1).expect("burn count overflow"));
+        config.burn_count = config
+            .burn_count
+            .checked_add(1)
+            .expect("burn count overflow");
+        env.storage().instance().set(&DataKey::Config, &config);
 
         // Emit TokenBurned event — primary ESG audit signal
         env.events()
@@ -736,16 +729,13 @@ impl TreeToken {
     // ── Burn queries ──────────────────────────────────────────────────────────
 
     /// Returns the burn record at sequential index `idx`, or None.
-    pub fn get_burn_record(env: Env, idx: u64) -> Option<BurnRecord> {
-        env.storage().persistent().get(&Self::burn_key(&env, idx))
+    pub fn get_burn_record(env: Env, idx: u32) -> Option<BurnRecord> {
+        env.storage().persistent().get(&DataKey::BurnRecord(idx))
     }
 
     /// Returns the total number of burn operations recorded.
-    pub fn burn_count(env: Env) -> u64 {
-        env.storage()
-            .instance()
-            .get(&symbol_short!("BURNCOUNT"))
-            .unwrap_or(0)
+    pub fn burn_count(env: Env) -> u32 {
+        Self::config(&env).burn_count
     }
 
     // ── Admin functions ───────────────────────────────────────────────────────
@@ -753,9 +743,9 @@ impl TreeToken {
     /// Pause all state-changing functions. Admin multi-sig only.
     pub fn pause(env: Env) {
         Self::require_admin(&env);
-        env.storage()
-            .instance()
-            .set(&symbol_short!("PAUSED"), &true);
+        let mut config = Self::config(&env);
+        config.paused = true;
+        env.storage().instance().set(&DataKey::Config, &config);
         env.events()
             .publish((symbol_short!("paused"),), env.ledger().timestamp());
     }
@@ -763,39 +753,33 @@ impl TreeToken {
     /// Unpause the contract. Admin multi-sig only.
     pub fn unpause(env: Env) {
         Self::require_admin(&env);
-        env.storage()
-            .instance()
-            .set(&symbol_short!("PAUSED"), &false);
+        let mut config = Self::config(&env);
+        config.paused = false;
+        env.storage().instance().set(&DataKey::Config, &config);
         env.events()
             .publish((symbol_short!("unpaused"),), env.ledger().timestamp());
     }
 
     /// Returns true if the contract is currently paused.
     pub fn is_paused(env: Env) -> bool {
-        env.storage()
-            .instance()
-            .get(&symbol_short!("PAUSED"))
-            .unwrap_or(false)
+        Self::config(&env).paused
     }
 
-    // ── Internal helpers ──────────────────────────────────────────────────────
+    // ── Internal ──────────────────────────────────────────────────────────────
+
+    fn config(env: &Env) -> Config {
+        env.storage()
+            .instance()
+            .get(&DataKey::Config)
+            .unwrap_or_else(|| panic_with_error!(env, HarvestaError::NotInitialized))
+    }
 
     fn require_admin(env: &Env) {
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&symbol_short!("ADMIN"))
-            .unwrap_or_else(|| panic_with_error!(env, HarvestaError::NotInitialized));
-        admin.require_auth();
+        Self::config(env).admin.require_auth();
     }
 
     fn assert_not_paused(env: &Env) {
-        let paused: bool = env
-            .storage()
-            .instance()
-            .get(&symbol_short!("PAUSED"))
-            .unwrap_or(false);
-        if paused {
+        if Self::config(env).paused {
             panic_with_error!(env, HarvestaError::ContractPaused);
         }
     }
@@ -947,8 +931,6 @@ mod tests {
     use std::string::ToString;
     use soroban_sdk::{testutils::{Address as _, Ledger as _}, token, Address, Env, String};
 
-    // ── Burn test helpers ─────────────────────────────────────────────────────
-
     fn setup() -> (Env, Address, Address, Address, TreeTokenClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
@@ -975,8 +957,6 @@ mod tests {
     fn esg_ref(env: &Env) -> soroban_sdk::String {
         String::from_str(env, "ESG-REPORT-2025-Q1")
     }
-
-    // ── Existing burn tests ───────────────────────────────────────────────────
 
     #[test]
     fn test_burn_reduces_balance_and_emits_event() {

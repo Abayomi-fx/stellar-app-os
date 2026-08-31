@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import './globals.css';
 import { Footer } from '@/components/organisms/Footer/Footer';
 import { Header } from '@/components/organisms/Header/Header';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { WalletProvider } from '@/contexts/WalletContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { TimeZoneProvider } from '@/contexts/TimeZoneContext';
 import {
   NotificationCenterDrawer,
   ToastContainer,
@@ -107,21 +109,27 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <WalletProvider>
-          <ToastProvider>
-            <QueryProvider>
-              <a
-                href="#main-content"
-                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-stellar-blue text-stellar-navy px-4 py-2 rounded-md font-semibold focus:ring-2 focus:ring-stellar-blue focus:ring-offset-2"
-              >
-                Skip to main content
-              </a>
-              <Header />
-              <main id="main-content">{children}</main>
-              <Footer />
-            </QueryProvider>
-          </ToastProvider>
-        </WalletProvider>
+        <TimeZoneProvider>
+          <WalletProvider>
+            <ToastProvider>
+              <QueryProvider>
+                <NotificationProvider>
+                  <a
+                    href="#main-content"
+                    className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-stellar-blue text-stellar-navy px-4 py-2 rounded-md font-semibold focus:ring-2 focus:ring-stellar-blue focus:ring-offset-2"
+                  >
+                    Skip to main content
+                  </a>
+                  <Header />
+                  <main id="main-content">{children}</main>
+                  <Footer />
+                  <NotificationCenterDrawer />
+                  <ToastContainer />
+                </NotificationProvider>
+              </QueryProvider>
+            </ToastProvider>
+          </WalletProvider>
+        </TimeZoneProvider>
       </body>
     </html>
   );

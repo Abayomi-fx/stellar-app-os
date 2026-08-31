@@ -54,8 +54,7 @@ export const RenewableEnergy: Story = {
       name: 'Kenya Solar Farm',
       type: 'Renewable Energy',
       location: 'Nairobi, Kenya',
-      description:
-        'Building a 50MW solar farm to provide clean energy to rural communities.',
+      description: 'Building a 50MW solar farm to provide clean energy to rural communities.',
       pricePerTon: 12,
     },
   },

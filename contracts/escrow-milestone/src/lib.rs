@@ -849,6 +849,23 @@ fn setup() -> Ctx {
         //    10_000,
         //    "contract holds full amount"
         //);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #9)")]
+    fn test_zero_amount_rejected() {
+        let Ctx {
+            client,
+            funder,
+            farmer,
+            token,
+            arbiter,
+            ..
+        } = setup();
+
+        client.deposit(&funder, &farmer, &token, &0, &arbiter);
+    }
+
         assert_eq!(balance(&env, &token, &farmer), 0, "farmer not yet paid");
 
         let state = client.get_escrow(&farmer).unwrap();
